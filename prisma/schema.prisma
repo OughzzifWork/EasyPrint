@@ -1,0 +1,125 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String     @id @default(uuid())
+  fullName     String
+  username     String     @unique
+  passwordHash String
+  role         String     @default("COMPTABLE")
+  active       Boolean    @default(true)
+  canEdit      Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  auditLogs    AuditLog[]
+}
+
+model Bank {
+  id        String     @id @default(uuid())
+  name      String
+  code      String     @unique
+  active    Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  templates Template[]
+  cheques   Cheque[]
+  effets    Effet[]
+}
+
+model Template {
+  id                 String          @id @default(uuid())
+  bankId             String
+  bank               Bank            @relation(fields: [bankId], references: [id])
+  documentType       String          // CHEQUE, EFFET
+  name               String
+  backgroundImageUrl String?
+  physicalWidthMm    Float           @default(210)
+  physicalHeightMm   Float           @default(100)
+  isActive           Boolean         @default(true)
+  validFrom          DateTime        @default(now())
+  validTo            DateTime?
+  createdAt          DateTime        @default(now())
+  fields             TemplateField[]
+  cheques            Cheque[]
+  effets             Effet[]
+}
+
+model TemplateField {
+  id         String   @id @default(uuid())
+  templateId String
+  template   Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  fieldKey   String
+  x          Float
+  y          Float
+  width      Float
+  fontSize   Float    @default(10)
+  fontFamily String   @default("Helvetica")
+  align      String   @default("LEFT")
+  format     String   @default("TEXT")
+}
+
+model Cheque {
+  id            String    @id @default(uuid())
+  bankId        String
+  bank          Bank      @relation(fields: [bankId], references: [id])
+  templateId    String
+  template      Template  @relation(fields: [templateId], references: [id])
+  beneficiary   String
+  amountNumeric Float
+  amountWords   String
+  creationDate  DateTime  @default(now())
+  creationPlace String
+  status        String    @default("DRAFT")
+  createdBy     String
+  createdAt     DateTime  @default(now())
+  deletedAt     DateTime?
+}
+
+model Effet {
+  id            String    @id @default(uuid())
+  bankId        String
+  bank          Bank      @relation(fields: [bankId], references: [id])
+  templateId    String
+  template      Template  @relation(fields: [templateId], references: [id])
+  sapCode       String
+  beneficiary   String
+  dueDate       DateTime
+  amountNumeric Float
+  amountWords   String
+  creationDate  DateTime  @default(now())
+  creationPlace String
+  cause         String
+  status        String    @default("DRAFT")
+  createdBy     String
+  createdAt     DateTime  @default(now())
+  deletedAt     DateTime?
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  entityType String
+  entityId   String
+  action     String
+  oldValue   String?
+  newValue   String?
+  createdAt  DateTime @default(now())
+}
+
+model Beneficiary {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  code      String?
+  category  String?  @default("FOURNISSEUR")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+

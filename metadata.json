@@ -1,0 +1,6 @@
+{
+  "name": "IMPCE Web",
+  "description": "Plateforme web de saisie, paramétrage de gabarits visuels et impression haute précision sur chèques et effets.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
