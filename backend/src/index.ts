@@ -37,9 +37,9 @@ app.use(cors({
 app.use(express.json({ limit: "2mb" }));
 
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+  windowMs: 1 * 60 * 1000,
   max: 10,
-  message: { error: "Trop de tentatives de connexion. Réessayez dans 15 minutes." },
+  message: { error: "Trop de tentatives de connexion. Réessayez dans 1 minute." },
   standardHeaders: true,
   legacyHeaders: false,
 });
