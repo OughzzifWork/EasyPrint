@@ -7,7 +7,7 @@ import { DevToolsBlocker } from "@/components/DevToolsBlocker";
 export const metadata: Metadata = {
   title: "EasyPrint - Gestion & Impression des Chèques & Effets",
   description: "Plateforme web de saisie, paramétrage de gabarits visuels et impression haute précision sur chèques et effets.",
-  icons: { icon: "/icon.png?v=3", shortcut: "/favicon.ico?v=3", apple: "/apple-touch-icon.png?v=3" },
+  icons: { icon: "/icon.png?v=4", shortcut: "/favicon.ico?v=4", apple: "/apple-touch-icon.png?v=4" },
 };
 
 export default function RootLayout({
