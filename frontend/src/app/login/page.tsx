@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { Building, Lock, User, AlertCircle, ArrowRight, Clock } from "lucide-react";
+import { Lock, User, AlertCircle, ArrowRight, Clock } from "lucide-react";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -37,36 +37,16 @@ export default function LoginPage() {
     if (cooldown > 0) return;
     setError(null);
     setIsLoading(true);
-
-    const API_URL = typeof window !== "undefined"
-      ? (process.env.NEXT_PUBLIC_API_URL || `${window.location.protocol}//${window.location.hostname}:4000`)
-      : "http://localhost:4000";
-
-    try {
-      const res = await fetch(`${API_URL}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
-
-      if (res.status === 429) {
-        const retryAfter = parseInt(res.headers.get("Retry-After") || "60", 10);
-        startCountdown(retryAfter);
-        setError(`Trop de tentatives. Réessayez dans ${retryAfter} secondes.`);
-        setIsLoading(false);
-        return;
-      }
-
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Erreur de connexion.");
-        setIsLoading(false);
-      } else {
-        window.location.href = "/dashboard";
-      }
-    } catch {
-      setError("Une erreur inattendue est survenue.");
+    const result = await login(username, password);
+    if (result.retryAfter) {
+      startCountdown(result.retryAfter);
+      setError(result.error || "Trop de tentatives.");
       setIsLoading(false);
+    } else if (result.error) {
+      setError(result.error);
+      setIsLoading(false);
+    } else {
+      window.location.href = "/dashboard";
     }
   };
 

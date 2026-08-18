@@ -18,7 +18,7 @@ interface AuthContextType {
   user: AuthUser | null;
   token: string | null;
   isLoading: boolean;
-  login: (username: string, password: string) => Promise<{ error?: string }>;
+  login: (username: string, password: string) => Promise<{ error?: string; retryAfter?: number }>;
   logout: () => void;
 }
 
@@ -62,6 +62,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       const data = await res.json();
+
+      if (res.status === 429) {
+        const retryAfter = parseInt(res.headers.get("Retry-After") || "60", 10);
+        return { error: data.error || "Trop de tentatives.", retryAfter };
+      }
 
       if (!res.ok) {
         return { error: data.error || "Erreur de connexion." };
