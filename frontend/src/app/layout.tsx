@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { Providers } from "./providers";
 import { DevToolsBlocker } from "@/components/DevToolsBlocker";
@@ -16,7 +17,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr" className="h-full bg-slate-50 antialiased" suppressHydrationWarning>
-      <body className="min-h-full flex flex-col font-sans">
+      <head>
+        <Script
+          id="strip-extension-attrs"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `try{new MutationObserver(function(){document.querySelectorAll("[data-dashlane-rid],[data-dashlane-autofill]").forEach(function(e){e.removeAttribute("data-dashlane-rid");e.removeAttribute("data-dashlane-autofill")})}).observe(document.documentElement,{childList:!0,subtree:!0,attributes:!0})}catch(e){}`,
+          }}
+        />
+      </head>
+      <body className="min-h-full flex flex-col font-sans" suppressHydrationWarning>
         <DevToolsBlocker />
         <Providers>{children}</Providers>
       </body>

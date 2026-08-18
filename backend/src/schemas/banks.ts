@@ -15,6 +15,6 @@ export const updateBankSchema = z.object({
   name: z.string().min(1).max(200).trim().optional(),
   code: z.string().min(1).max(20).trim().toUpperCase().optional(),
   active: z.coerce.boolean().optional(),
-  entityIds: z.array(z.string().uuid()).optional(),
-  logoUrl: z.string().max(2000).optional().nullable(),
+  entityIds: z.array(z.string()).optional(),
+  logoUrl: z.string().max(50000).optional().nullable(),
 }).refine(data => Object.keys(data).length > 0, { message: "Au moins un champ doit être fourni." });
