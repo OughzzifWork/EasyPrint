@@ -29,12 +29,11 @@ router.post("/reset-db", authMiddleware, adminOnly, async (req, res) => {
       prisma.templateEntity.deleteMany({}),
       prisma.template.deleteMany({}),
       prisma.bankEntity.deleteMany({}),
-      prisma.bank.deleteMany({}),
       prisma.user.deleteMany({ where: { id: { notIn: adminIds } } }),
       prisma.entity.deleteMany({}),
     ]);
 
-    return res.json({ message: "Base réinitialisée. Seuls les administrateurs système ont été conservés." });
+    return res.json({ message: "Base réinitialisée. Banques et administrateurs système conservés." });
   } catch (error) {
     console.error("[Reset DB Error]", error);
     return res.status(500).json({ error: "Erreur lors de la réinitialisation de la base de données." });

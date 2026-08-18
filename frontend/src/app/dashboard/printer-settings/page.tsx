@@ -556,7 +556,7 @@ export default function PrinterSettingsPage() {
         </div>
 
         <div className="p-4 bg-red-50 rounded-xl border border-red-100 text-sm text-red-800 leading-relaxed">
-          <strong>Attention :</strong> Cette action est <strong>irréversible</strong>. Elle supprimera toutes les données de la base (chèques, effets, banques, bénéficiaires, modèles, entités, utilisateurs non-admin, journaux d'audit). Seuls les comptes <strong>Administrateur Système</strong> seront conservés.
+          <strong>Attention :</strong> Cette action est <strong>irréversible</strong>. Elle supprimera toutes les données de la base (chèques, effets, bénéficiaires, modèles, entités, utilisateurs non-admin, journaux d'audit). Les <strong>banques</strong> et les comptes <strong>Administrateur Système</strong> seront conservés.
         </div>
 
         {resetMessage && (
