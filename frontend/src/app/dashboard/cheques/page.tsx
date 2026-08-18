@@ -21,6 +21,7 @@ import {
   RotateCcw,
   Clock,
   CheckCheck,
+  UserCheck,
 } from "lucide-react";
 import { clsx } from "clsx";
 
@@ -31,6 +32,7 @@ export default function ChequesPage() {
 
   const [cheques, setCheques] = useState<any[]>([]);
   const [banks, setBanks] = useState<any[]>([]);
+  const [entities, setEntities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Active Tab: "ACTIVE" (En cours), "PRINTED" (Déjà Imprimé), "DELETED" (Déjà Supprimé)
@@ -39,6 +41,7 @@ export default function ChequesPage() {
   // Filters
   const [search, setSearch] = useState("");
   const [selectedBankId, setSelectedBankId] = useState("");
+  const [selectedEntityId, setSelectedEntityId] = useState("");
 
   // Notifications
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +60,8 @@ export default function ChequesPage() {
   // Form state
   const [bankId, setBankId] = useState("");
   const [beneficiary, setBeneficiary] = useState("");
+  const [beneficiarySearch, setBeneficiarySearch] = useState("");
+  const [showBeneficiaryDropdown, setShowBeneficiaryDropdown] = useState(false);
   const [amountNumeric, setAmountNumeric] = useState<string>("");
   const [amountWords, setAmountWords] = useState("");
   const [creationDate, setCreationDate] = useState(new Date().toISOString().split("T")[0]);
@@ -134,8 +139,18 @@ export default function ChequesPage() {
     }
   };
 
+  const fetchEntities = async () => {
+    try {
+      const data = await fetchApi("/api/entities");
+      setEntities(Array.isArray(data) ? data.filter((e: any) => e.active) : []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchBanks();
+    fetchEntities();
   }, []);
 
   useEffect(() => {
@@ -260,7 +275,7 @@ export default function ChequesPage() {
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Chèques");
-    XLSX.writeFile(workbook, `Cheques_IMPCE_${new Date().toISOString().split("T")[0]}.xlsx`);
+    XLSX.writeFile(workbook, `Cheques_EasyPrint_${new Date().toISOString().split("T")[0]}.xlsx`);
   };
 
   const handleBatchImportSubmit = async (e: React.FormEvent) => {
@@ -359,6 +374,8 @@ export default function ChequesPage() {
 
     if (!matchesSearch) return false;
 
+    if (selectedEntityId && c.entityId !== selectedEntityId) return false;
+
     if (activeTab === "ACTIVE") return !c.deletedAt && c.status !== "PRINTED";
     if (activeTab === "PRINTED") return !c.deletedAt && c.status === "PRINTED";
     if (activeTab === "DELETED") return c.deletedAt != null;
@@ -370,7 +387,7 @@ export default function ChequesPage() {
       <Header title="Gestion & Saisie des Chèques" />
 
       {/* Action Bar */}
-      <div className="flex flex-col lg:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col lg:flex-row items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
           {/* Search */}
           <div className="relative w-full sm:w-64">
@@ -380,7 +397,7 @@ export default function ChequesPage() {
               placeholder="Rechercher bénéficiaire, lieu..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30"
             />
           </div>
 
@@ -388,7 +405,7 @@ export default function ChequesPage() {
           <select
             value={selectedBankId}
             onChange={(e) => setSelectedBankId(e.target.value)}
-            className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+            className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30 font-medium"
           >
             <option value="">Toutes les banques</option>
             {banks.map((b) => (
@@ -397,6 +414,22 @@ export default function ChequesPage() {
               </option>
             ))}
           </select>
+
+          {/* Entity Filter */}
+          {isAdmin && entities.length > 0 && (
+            <select
+              value={selectedEntityId}
+              onChange={(e) => setSelectedEntityId(e.target.value)}
+              className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30 font-medium"
+            >
+              <option value="">Toutes les entités</option>
+              {entities.map((ent) => (
+                <option key={ent.id} value={ent.id}>
+                  {ent.name} ({ent.code})
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div className="flex items-center gap-3 w-full lg:w-auto justify-end">
@@ -423,7 +456,7 @@ export default function ChequesPage() {
                   resetForm();
                   setIsCreateOpen(true);
                 }}
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-xl shadow-md shadow-blue-500/20 transition-all"
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white font-semibold text-sm rounded-xl shadow-sm transition-all"
               >
                 <Plus className="w-4 h-4" />
                 <span>Nouveau Chèque</span>
@@ -434,13 +467,13 @@ export default function ChequesPage() {
       </div>
 
       {/* 3 TABS NAVIGATION */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-1 overflow-x-auto">
+      <div className="flex items-center gap-2 border-b border-slate-200/80 pb-1 overflow-x-auto">
         <button
           onClick={() => setActiveTab("ACTIVE")}
           className={clsx(
             "flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all border",
             activeTab === "ACTIVE"
-              ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+              ? "bg-[#1E3A8A] text-white border-[#1E3A8A] shadow-sm"
               : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
           )}
         >
@@ -524,7 +557,7 @@ export default function ChequesPage() {
       )}
 
       {/* Cheques DataGrid */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-slate-400 font-medium">Chargement des chèques...</div>
         ) : filteredCheques.length === 0 ? (
@@ -534,11 +567,14 @@ export default function ChequesPage() {
             <table className="w-full text-left text-sm text-slate-600">
               <thead className="bg-slate-50 text-slate-500 uppercase text-[11px] tracking-wider font-semibold border-b border-slate-200">
                 <tr>
+                  <th className="py-3.5 px-6">Entité</th>
                   <th className="py-3.5 px-6">Banque</th>
                   <th className="py-3.5 px-6">Bénéficiaire</th>
                   <th className="py-3.5 px-6">Montant (#)</th>
-                  <th className="py-3.5 px-6">Montant en Lettres</th>
                   <th className="py-3.5 px-6">Lieu / Date</th>
+                  <th className="py-3.5 px-6">Créé par</th>
+                  <th className="py-3.5 px-6">Date création</th>
+                  <th className="py-3.5 px-6">Date impression</th>
                   <th className="py-3.5 px-6">Statut</th>
                   <th className="py-3.5 px-6 text-right">Actions</th>
                 </tr>
@@ -552,22 +588,27 @@ export default function ChequesPage() {
                       c.deletedAt && "bg-rose-50/40 opacity-70 italic"
                     )}
                   >
+                    <td className="py-4 px-6">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 text-xs font-semibold">
+                        {c.entity?.code || "—"}
+                      </span>
+                    </td>
                     <td className="py-4 px-6 font-bold text-slate-900">
                       <span className="bg-slate-100 px-2.5 py-1 rounded border border-slate-200 text-xs font-mono">
                         {c.bank?.code || "BANQUE"}
                       </span>
                     </td>
                     <td className="py-4 px-6 font-semibold text-slate-900">{c.beneficiary}</td>
-                    <td className="py-4 px-6 font-mono font-bold text-blue-700">
+                    <td className="py-4 px-6 font-mono font-bold text-[#1E3A8A]">
                       {c.amountNumeric.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} #
-                    </td>
-                    <td className="py-4 px-6 text-xs text-slate-500 max-w-xs truncate" title={c.amountWords}>
-                      {c.amountWords}
                     </td>
                     <td className="py-4 px-6 text-xs text-slate-500">
                       <p className="font-semibold text-slate-800">{c.creationPlace}</p>
                       <p>{c.creationDate ? new Date(c.creationDate).toLocaleDateString("fr-FR") : ""}</p>
                     </td>
+                    <td className="py-4 px-6 text-xs text-slate-600">{c.createdByName || "—"}</td>
+                    <td className="py-4 px-6 text-xs text-slate-500">{c.createdAt ? new Date(c.createdAt).toLocaleDateString("fr-FR") : "—"}</td>
+                    <td className="py-4 px-6 text-xs text-slate-500">{c.printedAt ? new Date(c.printedAt).toLocaleDateString("fr-FR") : "—"}</td>
                     <td className="py-4 px-6">
                       {c.deletedAt ? (
                         <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700 border border-rose-200">
@@ -579,7 +620,7 @@ export default function ChequesPage() {
                             "px-2.5 py-1 rounded-full text-xs font-bold uppercase border",
                             c.status === "PRINTED"
                               ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              : "bg-blue-50 text-blue-700 border-blue-200"
+                              : "bg-[#1E3A8A]/10 text-[#1E3A8A] border-[#1E3A8A]/20"
                           )}
                         >
                           {c.status}
@@ -593,7 +634,7 @@ export default function ChequesPage() {
                             {canEdit && (
                               <button
                                 onClick={() => handleRestoreCheque(c.id)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-bold border border-blue-200 transition-colors"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-[#1E3A8A] rounded-lg text-xs font-bold border border-blue-200 transition-colors"
                                 title="Récupérer / Restaurer ce chèque"
                               >
                                 <RotateCcw className="w-3.5 h-3.5" />
@@ -634,7 +675,7 @@ export default function ChequesPage() {
                             ) : (
                               <button
                                 onClick={() => openPrintPdfModal(c.id)}
-                                className="inline-flex items-center gap-1 p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors text-xs font-semibold"
+                                className="inline-flex items-center gap-1 p-2 text-[#1E3A8A] hover:bg-[#1E3A8A]/5 rounded-lg transition-colors text-xs font-semibold"
                                 title="Imprimer le PDF haute précision"
                               >
                                 <Printer className="w-4 h-4" /> Imprimer
@@ -654,7 +695,7 @@ export default function ChequesPage() {
                                 ) : (
                                   <button
                                     onClick={() => openEditModal(c)}
-                                    className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                    className="p-2 text-slate-500 hover:text-[#1E3A8A] hover:bg-[#1E3A8A]/5 rounded-lg transition-colors"
                                     title="Modifier"
                                   >
                                     <Edit2 className="w-4 h-4" />
@@ -693,8 +734,8 @@ export default function ChequesPage() {
 
       {/* Modal Saisie Chèque */}
       {isCreateOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-bold text-lg text-slate-900">Saisie d'un nouveau chèque</h3>
               <button onClick={() => setIsCreateOpen(false)} className="text-slate-400 hover:text-slate-600">
@@ -708,7 +749,7 @@ export default function ChequesPage() {
                 <select
                   value={bankId}
                   onChange={(e) => setBankId(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30 font-semibold"
                 >
                   {banks.map((b) => (
                     <option key={b.id} value={b.id}>
@@ -718,24 +759,66 @@ export default function ChequesPage() {
                 </select>
               </div>
 
-              <div>
+              <div className="relative">
                 <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">
-                  Nom du Bénéficiaire (Propositions enregistrées)
+                  Nom du Bénéficiaire
                 </label>
-                <input
-                  type="text"
-                  required
-                  list="beneficiaries-list"
-                  value={beneficiary}
-                  onChange={(e) => setBeneficiary(e.target.value)}
-                  placeholder="Tapez ou sélectionnez un bénéficiaire enregistré..."
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
-                />
-                <datalist id="beneficiaries-list">
-                  {storedBeneficiaries.map((b: any) => (
-                    <option key={b.id || b.name} value={b.name} />
-                  ))}
-                </datalist>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      required
+                      value={beneficiary}
+                      onChange={(e) => {
+                        setBeneficiary(e.target.value);
+                        setBeneficiarySearch(e.target.value);
+                        setShowBeneficiaryDropdown(true);
+                      }}
+                      onFocus={() => setShowBeneficiaryDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowBeneficiaryDropdown(false), 200)}
+                      placeholder="Tapez pour rechercher ou sélectionnez..."
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30 font-medium"
+                    />
+                    {showBeneficiaryDropdown && storedBeneficiaries.length > 0 && (
+                      <div className="absolute z-20 top-full mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                        {storedBeneficiaries
+                          .filter((b: any) => b.name.toLowerCase().includes(beneficiarySearch.toLowerCase()))
+                          .map((b: any) => (
+                            <button
+                              key={b.id || b.name}
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => {
+                                setBeneficiary(b.name);
+                                setShowBeneficiaryDropdown(false);
+                              }}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 flex items-center gap-2"
+                            >
+                              <UserCheck className="w-3.5 h-3.5 text-slate-400" />
+                              <span className="font-semibold text-slate-800">{b.name}</span>
+                              {b.category && <span className="text-[10px] text-slate-400 ml-auto">{b.category}</span>}
+                            </button>
+                          ))
+                          .slice(0, 20)}
+                        {beneficiarySearch && !storedBeneficiaries.some((b: any) => b.name.toLowerCase() === beneficiarySearch.toLowerCase()) && (
+                          <button
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                              setBeneficiary(beneficiarySearch);
+                              setShowBeneficiaryDropdown(false);
+                            }}
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 flex items-center gap-2 border-t border-slate-100"
+                          >
+                            <Plus className="w-3.5 h-3.5 text-emerald-500" />
+                            <span className="text-emerald-700 font-semibold">Utiliser "{beneficiarySearch}"</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">Sélectionnez dans la liste ou tapez un nouveau nom</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -748,7 +831,7 @@ export default function ChequesPage() {
                     value={amountNumeric}
                     onChange={(e) => handleAmountNumericChange(e.target.value)}
                     placeholder="ex: 125000.00"
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30"
                   />
                 </div>
 
@@ -758,7 +841,7 @@ export default function ChequesPage() {
                     type="text"
                     value={creationPlace}
                     onChange={(e) => setCreationPlace(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30"
                   />
                 </div>
               </div>
@@ -771,7 +854,7 @@ export default function ChequesPage() {
                   rows={2}
                   value={amountWords}
                   onChange={(e) => setAmountWords(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30 font-medium"
                 />
               </div>
 
@@ -781,7 +864,7 @@ export default function ChequesPage() {
                   type="date"
                   value={creationDate}
                   onChange={(e) => setCreationDate(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30"
                 />
               </div>
 
@@ -795,7 +878,7 @@ export default function ChequesPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl shadow-md shadow-blue-500/20"
+                  className="px-4 py-2 bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white text-sm font-semibold rounded-xl shadow-sm"
                 >
                   Enregistrer le chèque
                 </button>
@@ -807,8 +890,8 @@ export default function ChequesPage() {
 
       {/* Modal Edition Chèque */}
       {isEditOpen && selectedCheque && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-bold text-lg text-slate-900">Modifier le chèque</h3>
               <button onClick={() => setIsEditOpen(false)} className="text-slate-400 hover:text-slate-600">
@@ -817,16 +900,59 @@ export default function ChequesPage() {
             </div>
 
             <form onSubmit={handleEditSubmit} className="space-y-4">
-              <div>
+              <div className="relative">
                 <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Nom du Bénéficiaire</label>
                 <input
                   type="text"
                   required
-                  list="beneficiaries-list"
                   value={beneficiary}
-                  onChange={(e) => setBeneficiary(e.target.value)}
+                  onChange={(e) => {
+                    setBeneficiary(e.target.value);
+                    setBeneficiarySearch(e.target.value);
+                    setShowBeneficiaryDropdown(true);
+                  }}
+                  onFocus={() => setShowBeneficiaryDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowBeneficiaryDropdown(false), 200)}
+                  placeholder="Tapez pour rechercher ou sélectionnez..."
                   className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium"
                 />
+                {showBeneficiaryDropdown && storedBeneficiaries.length > 0 && (
+                  <div className="absolute z-20 top-full mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                    {storedBeneficiaries
+                      .filter((b: any) => b.name.toLowerCase().includes(beneficiarySearch.toLowerCase()))
+                      .map((b: any) => (
+                        <button
+                          key={b.id || b.name}
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setBeneficiary(b.name);
+                            setShowBeneficiaryDropdown(false);
+                          }}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 flex items-center gap-2"
+                        >
+                          <UserCheck className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="font-semibold text-slate-800">{b.name}</span>
+                          {b.category && <span className="text-[10px] text-slate-400 ml-auto">{b.category}</span>}
+                        </button>
+                      ))
+                      .slice(0, 20)}
+                    {beneficiarySearch && !storedBeneficiaries.some((b: any) => b.name.toLowerCase() === beneficiarySearch.toLowerCase()) && (
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          setBeneficiary(beneficiarySearch);
+                          setShowBeneficiaryDropdown(false);
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 flex items-center gap-2 border-t border-slate-100"
+                      >
+                        <Plus className="w-3.5 h-3.5 text-emerald-500" />
+                        <span className="text-emerald-700 font-semibold">Utiliser "{beneficiarySearch}"</span>
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -873,7 +999,7 @@ export default function ChequesPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl shadow-md shadow-blue-500/20"
+                  className="px-4 py-2 bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white text-sm font-semibold rounded-xl shadow-sm"
                 >
                   Mettre à jour
                 </button>
@@ -885,8 +1011,8 @@ export default function ChequesPage() {
 
       {/* Modal Batch Import Excel */}
       {isImportOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-bold text-lg text-slate-900 flex items-center gap-2">
                 <Upload className="w-5 h-5 text-blue-600" />
@@ -924,17 +1050,17 @@ export default function ChequesPage() {
                   accept=".xlsx, .xls, .csv"
                   required
                   onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-                  className="w-full text-xs text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  className="w-full text-xs text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-[#1E3A8A] hover:file:bg-blue-100"
                 />
               </div>
 
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500 leading-relaxed">
                 <p className="font-bold text-slate-700 mb-1">Format de colonnes attendu :</p>
                 <p>
-                  <code className="font-mono text-blue-700">Bénéficiaire</code>,{" "}
-                  <code className="font-mono text-blue-700">Montant</code>,{" "}
-                  <code className="font-mono text-blue-700">Code_Banque</code> (optionnel),{" "}
-                  <code className="font-mono text-blue-700">Lieu</code> (optionnel).
+                  <code className="font-mono text-[#1E3A8A]">Bénéficiaire</code>,{" "}
+                  <code className="font-mono text-[#1E3A8A]">Montant</code>,{" "}
+                  <code className="font-mono text-[#1E3A8A]">Code_Banque</code> (optionnel),{" "}
+                  <code className="font-mono text-[#1E3A8A]">Lieu</code> (optionnel).
                 </p>
               </div>
 
@@ -949,7 +1075,7 @@ export default function ChequesPage() {
                 <button
                   type="submit"
                   disabled={importing || !importFile}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-semibold rounded-xl shadow-md shadow-blue-500/20 flex items-center gap-2"
+                  className="px-4 py-2 bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 disabled:opacity-50 text-white text-sm font-semibold rounded-xl shadow-sm flex items-center gap-2"
                 >
                   {importing && <Upload className="w-4 h-4 animate-spin" />}
                   <span>Lancer l'importation</span>
@@ -963,7 +1089,7 @@ export default function ChequesPage() {
       {/* PDF Modal Viewer */}
       {isPrintOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-4xl w-full h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+          <div className="bg-white rounded-2xl max-w-4xl w-full h-[85vh] flex flex-col overflow-hidden shadow-xl">
             <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
               <h3 className="font-bold text-sm flex items-center gap-2">
                 <Printer className="w-4 h-4 text-blue-400" />

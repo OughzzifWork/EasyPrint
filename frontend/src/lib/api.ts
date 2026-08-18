@@ -1,4 +1,10 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+function getApiUrl(): string {
+  if (typeof window === "undefined") return "http://localhost:4000";
+  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+  return `${window.location.protocol}//${window.location.hostname}:4000`;
+}
+
+const API_URL = getApiUrl();
 
 function getAuthHeaders(extra?: Record<string, string>): Record<string, string> {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;

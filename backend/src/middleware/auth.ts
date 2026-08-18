@@ -8,6 +8,7 @@ export interface AuthUser {
   username: string;
   fullName: string;
   role: string;
+  entityId: string | null;
   canEdit: boolean;
   active: boolean;
 }

@@ -203,7 +203,7 @@ export function TemplateCanvas({
 
           <button
             onClick={onGeneratePreviewPdf}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-xs rounded-xl shadow-md shadow-blue-500/20 transition-all"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-[#A16207] hover:bg-[#925506] text-white font-semibold text-xs rounded-xl shadow-sm transition-all"
           >
             <Eye className="w-4 h-4" />
             <span>Aperçu PDF Réel</span>
@@ -266,7 +266,7 @@ export function TemplateCanvas({
                   className={clsx(
                     "absolute cursor-move flex items-center justify-between px-2 text-xs font-mono font-semibold rounded transition-shadow border-2 group",
                     isSelected
-                      ? "bg-blue-500/20 border-blue-600 ring-2 ring-blue-400/50 shadow-lg text-blue-900 z-20"
+                      ? "bg-[#1E3A8A]/20 border-[#1E3A8A] ring-2 ring-[#1E3A8A]/40 shadow-lg text-[#1E3A8A] z-20"
                       : "bg-amber-400/20 border-amber-500/80 hover:bg-amber-400/40 text-amber-950 z-10"
                   )}
                 >
@@ -321,7 +321,7 @@ export function TemplateCanvas({
                   step="0.5"
                   value={selectedField.x}
                   onChange={(e) => updateSelectedField("x", parseFloat(e.target.value) || 0)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30"
                 />
               </div>
 
@@ -332,7 +332,7 @@ export function TemplateCanvas({
                   step="0.5"
                   value={selectedField.y}
                   onChange={(e) => updateSelectedField("y", parseFloat(e.target.value) || 0)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30"
                 />
               </div>
             </div>
@@ -346,7 +346,7 @@ export function TemplateCanvas({
                   step="1"
                   value={selectedField.width}
                   onChange={(e) => updateSelectedField("width", parseFloat(e.target.value) || 10)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30"
                 />
               </div>
 
@@ -357,7 +357,7 @@ export function TemplateCanvas({
                   step="1"
                   value={selectedField.fontSize}
                   onChange={(e) => updateSelectedField("fontSize", parseFloat(e.target.value) || 10)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30"
                 />
               </div>
             </div>
@@ -368,7 +368,7 @@ export function TemplateCanvas({
               <select
                 value={selectedField.fontFamily}
                 onChange={(e) => updateSelectedField("fontFamily", e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30"
               >
                 <option value="Helvetica">Helvetica (Standard)</option>
                 <option value="Courier">Courier (Monospacé)</option>
@@ -384,7 +384,7 @@ export function TemplateCanvas({
                   onClick={() => updateSelectedField("align", "LEFT")}
                   className={clsx(
                     "p-2 rounded-xl border flex items-center justify-center gap-1 text-xs font-semibold transition-all",
-                    selectedField.align === "LEFT" ? "bg-blue-600 text-white border-blue-600" : "bg-slate-50 text-slate-700 border-slate-200"
+                    selectedField.align === "LEFT" ? "bg-[#1E3A8A] text-white border-[#1E3A8A]" : "bg-slate-50 text-slate-700 border-slate-200"
                   )}
                 >
                   <AlignLeft className="w-4 h-4" /> Gauche
@@ -394,7 +394,7 @@ export function TemplateCanvas({
                   onClick={() => updateSelectedField("align", "CENTER")}
                   className={clsx(
                     "p-2 rounded-xl border flex items-center justify-center gap-1 text-xs font-semibold transition-all",
-                    selectedField.align === "CENTER" ? "bg-blue-600 text-white border-blue-600" : "bg-slate-50 text-slate-700 border-slate-200"
+                    selectedField.align === "CENTER" ? "bg-[#1E3A8A] text-white border-[#1E3A8A]" : "bg-slate-50 text-slate-700 border-slate-200"
                   )}
                 >
                   <AlignCenter className="w-4 h-4" /> Centre
@@ -404,7 +404,7 @@ export function TemplateCanvas({
                   onClick={() => updateSelectedField("align", "RIGHT")}
                   className={clsx(
                     "p-2 rounded-xl border flex items-center justify-center gap-1 text-xs font-semibold transition-all",
-                    selectedField.align === "RIGHT" ? "bg-blue-600 text-white border-blue-600" : "bg-slate-50 text-slate-700 border-slate-200"
+                    selectedField.align === "RIGHT" ? "bg-[#1E3A8A] text-white border-[#1E3A8A]" : "bg-slate-50 text-slate-700 border-slate-200"
                   )}
                 >
                   <AlignRight className="w-4 h-4" /> Droite

@@ -66,7 +66,7 @@ export default function AuditPage() {
       case "EFFET":
         return <FileSpreadsheet className="w-4 h-4 text-amber-600" />;
       case "BANK":
-        return <Building2 className="w-4 h-4 text-blue-600" />;
+        return <Building2 className="w-4 h-4 text-[#1E3A8A]" />;
       case "TEMPLATE":
         return <LayoutTemplate className="w-4 h-4 text-indigo-600" />;
       case "USER":
@@ -86,7 +86,7 @@ export default function AuditPage() {
         );
       case "UPDATE":
         return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-[#1E3A8A]/10 text-[#1E3A8A] border border-[#1E3A8A]/20">
             MODIFICATION
           </span>
         );
@@ -126,7 +126,7 @@ export default function AuditPage() {
       <Header title="Journal d'Audit & Historique des Actions" />
 
       {/* Filter & Action Bar */}
-      <div className="flex flex-col lg:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col lg:flex-row items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
           {/* Search Input */}
           <div className="relative w-full sm:w-72">
@@ -137,7 +137,7 @@ export default function AuditPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && fetchAuditLogs()}
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30"
             />
           </div>
 
@@ -145,7 +145,7 @@ export default function AuditPage() {
           <select
             value={selectedEntity}
             onChange={(e) => setSelectedEntity(e.target.value)}
-            className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+            className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30 font-medium"
           >
             <option value="">Toutes les entités</option>
             <option value="CHEQUE">Chèques</option>
@@ -159,7 +159,7 @@ export default function AuditPage() {
           <select
             value={selectedAction}
             onChange={(e) => setSelectedAction(e.target.value)}
-            className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+            className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30 font-medium"
           >
             <option value="">Toutes les actions</option>
             <option value="CREATE">Création</option>
@@ -191,7 +191,7 @@ export default function AuditPage() {
       )}
 
       {/* Audit Log Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-slate-400 font-medium">Chargement du journal d'audit...</div>
         ) : logs.length === 0 ? (
@@ -258,11 +258,11 @@ export default function AuditPage() {
 
       {/* Log Details Modal */}
       {selectedLog && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <History className="w-5 h-5 text-blue-600" />
+                <History className="w-5 h-5 text-[#1E3A8A]" />
                 <h3 className="font-bold text-lg text-slate-900">Détails de l'événement d'audit</h3>
               </div>
               <button onClick={() => setSelectedLog(null)} className="text-slate-400 hover:text-slate-600">

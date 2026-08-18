@@ -7,12 +7,35 @@ generator client {
   provider = "prisma-client-js"
 }
 
+model Entity {
+  id             String             @id @default(uuid())
+  name           String
+  code           String             @unique
+  dataMode       String             @default("NORMAL") // NORMAL, SAP
+  sapServerUrl   String?
+  sapCompanyDB   String?
+  sapUser        String?
+  sapPassword    String?
+  sapQuery       String?
+  active         Boolean            @default(true)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  users          User[]
+  bankEntities   BankEntity[]
+  templateEntities TemplateEntity[]
+  cheques        Cheque[]
+  effets         Effet[]
+  beneficiaries  Beneficiary[]
+}
+
 model User {
   id           String     @id @default(uuid())
   fullName     String
   username     String     @unique
   passwordHash String
-  role         String     @default("COMPTABLE")
+  role         String     @default("COMPTABLE") // ADMIN, COMPTABLE, VISITEUR
+  entityId     String?
+  entity       Entity?    @relation(fields: [entityId], references: [id])
   active       Boolean    @default(true)
   canEdit      Boolean    @default(true)
   createdAt    DateTime   @default(now())
@@ -21,33 +44,56 @@ model User {
 }
 
 model Bank {
-  id        String     @id @default(uuid())
-  name      String
-  code      String     @unique
-  active    Boolean    @default(true)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  templates Template[]
-  cheques   Cheque[]
-  effets    Effet[]
+  id           String         @id @default(uuid())
+  name         String
+  code         String         @unique
+  logoUrl      String?
+  active       Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  bankEntities BankEntity[]
+  templates    Template[]
+  cheques      Cheque[]
+  effets       Effet[]
+}
+
+model BankEntity {
+  id       String   @id @default(uuid())
+  bankId   String
+  bank     Bank     @relation(fields: [bankId], references: [id], onDelete: Cascade)
+  entityId String
+  entity   Entity   @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@unique([bankId, entityId])
 }
 
 model Template {
-  id                 String          @id @default(uuid())
+  id                 String             @id @default(uuid())
   bankId             String
-  bank               Bank            @relation(fields: [bankId], references: [id])
-  documentType       String          // CHEQUE, EFFET
+  bank               Bank               @relation(fields: [bankId], references: [id])
+  documentType       String             // CHEQUE, EFFET
   name               String
   backgroundImageUrl String?
-  physicalWidthMm    Float           @default(210)
-  physicalHeightMm   Float           @default(100)
-  isActive           Boolean         @default(true)
-  validFrom          DateTime        @default(now())
+  physicalWidthMm    Float              @default(210)
+  physicalHeightMm   Float              @default(100)
+  isActive           Boolean            @default(true)
+  validFrom          DateTime           @default(now())
   validTo            DateTime?
-  createdAt          DateTime        @default(now())
+  createdAt          DateTime           @default(now())
   fields             TemplateField[]
+  templateEntities   TemplateEntity[]
   cheques            Cheque[]
   effets             Effet[]
+}
+
+model TemplateEntity {
+  id         String   @id @default(uuid())
+  templateId String
+  template   Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  entityId   String
+  entity     Entity   @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, entityId])
 }
 
 model TemplateField {
@@ -70,6 +116,8 @@ model Cheque {
   bank          Bank      @relation(fields: [bankId], references: [id])
   templateId    String
   template      Template  @relation(fields: [templateId], references: [id])
+  entityId      String?
+  entity        Entity?   @relation(fields: [entityId], references: [id])
   beneficiary   String
   amountNumeric Float
   amountWords   String
@@ -78,6 +126,7 @@ model Cheque {
   status        String    @default("DRAFT")
   createdBy     String
   createdAt     DateTime  @default(now())
+  printedAt     DateTime?
   deletedAt     DateTime?
 }
 
@@ -87,6 +136,8 @@ model Effet {
   bank          Bank      @relation(fields: [bankId], references: [id])
   templateId    String
   template      Template  @relation(fields: [templateId], references: [id])
+  entityId      String?
+  entity        Entity?   @relation(fields: [entityId], references: [id])
   sapCode       String
   beneficiary   String
   dueDate       DateTime
@@ -98,6 +149,7 @@ model Effet {
   status        String    @default("DRAFT")
   createdBy     String
   createdAt     DateTime  @default(now())
+  printedAt     DateTime?
   deletedAt     DateTime?
 }
 
@@ -115,11 +167,14 @@ model AuditLog {
 
 model Beneficiary {
   id        String   @id @default(uuid())
-  name      String   @unique
+  name      String
   code      String?
   category  String?  @default("FOURNISSEUR")
+  entityId  String?
+  entity    Entity?  @relation(fields: [entityId], references: [id])
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
 
+  @@unique([name, entityId])
+}

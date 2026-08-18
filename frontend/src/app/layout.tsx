@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
-
-const inter = Inter({ subsets: ["latin"] });
+import { DevToolsBlocker } from "@/components/DevToolsBlocker";
 
 export const metadata: Metadata = {
-  title: "IMPCE Web - Gestion & Impression des Chèques & Effets",
+  title: "EasyPrint - Gestion & Impression des Chèques & Effets",
   description: "Plateforme web de saisie, paramétrage de gabarits visuels et impression haute précision sur chèques et effets.",
+  icons: { icon: "/icon.png?v=3", shortcut: "/favicon.ico?v=3", apple: "/apple-touch-icon.png?v=3" },
 };
 
 export default function RootLayout({
@@ -17,7 +16,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr" className="h-full bg-slate-50 antialiased">
-      <body className={`${inter.className} min-h-full flex flex-col font-sans`}>
+      <body className="min-h-full flex flex-col font-sans">
+        <DevToolsBlocker />
         <Providers>{children}</Providers>
       </body>
     </html>

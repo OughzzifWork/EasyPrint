@@ -196,7 +196,7 @@ export default function PrinterSettingsPage() {
     return (
       <div className="space-y-6">
         <Header title="Paramètres d'imprimante" />
-        <div className="p-8 max-w-lg mx-auto bg-white rounded-2xl border border-slate-200 shadow-sm text-center space-y-4 my-12">
+        <div className="p-8 max-w-lg mx-auto bg-white rounded-xl border border-slate-200/80 shadow-sm text-center space-y-4 my-12">
           <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mx-auto">
             <ShieldAlert className="w-8 h-8" />
           </div>
@@ -214,9 +214,9 @@ export default function PrinterSettingsPage() {
       <Header title="Paramétrage & Calibrage des Imprimantes" />
 
       {/* Intro Box */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="bg-white p-6 rounded-xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-[#1E3A8A]/10 text-[#1E3A8A] flex items-center justify-center font-bold shrink-0">
             <Printer className="w-6 h-6" />
           </div>
           <div>
@@ -237,7 +237,7 @@ export default function PrinterSettingsPage() {
           </button>
           <button
             onClick={handleSave}
-            className="inline-flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 transition-all"
+            className="inline-flex items-center gap-2 px-5 py-2 bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white font-bold text-xs rounded-xl shadow-sm transition-all"
           >
             <Save className="w-4 h-4" />
             <span>Enregistrer la Configuration</span>
@@ -254,7 +254,7 @@ export default function PrinterSettingsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Section 1: Profil & Liste des Imprimantes du Système */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-5">
+        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-5">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <Settings2 className="w-5 h-5 text-blue-600" />
@@ -285,7 +285,7 @@ export default function PrinterSettingsPage() {
               <select
                 value={printerName}
                 onChange={(e) => setPrinterName(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30"
               >
                 {systemPrinters.map((p) => (
                   <option key={p} value={p}>
@@ -306,7 +306,7 @@ export default function PrinterSettingsPage() {
                   placeholder="ex: Epson LQ-350 sur USB001, HP LaserJet comptabilité..."
                   value={newPrinterInput}
                   onChange={(e) => setNewPrinterInput(e.target.value)}
-                  className="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30"
                 />
                 <button
                   type="button"
@@ -327,7 +327,7 @@ export default function PrinterSettingsPage() {
                 <select
                   value={connectionType}
                   onChange={(e) => setConnectionType(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30"
                 >
                   <option value="USB">Port USB Direct</option>
                   <option value="NETWORK_IP">Réseau IP / Ethernet</option>
@@ -343,7 +343,7 @@ export default function PrinterSettingsPage() {
                 <select
                   value={paperTray}
                   onChange={(e) => setPaperTray(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30"
                 >
                   <option value="MANUAL_SLOT">Fente d'insertion manuelle à chèques</option>
                   <option value="MAIN_TRAY">Bac 1 (Principal)</option>
@@ -362,7 +362,7 @@ export default function PrinterSettingsPage() {
         </div>
 
         {/* Section 2: Calibrage & Marges Physiques */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-5">
+        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-5">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
             <Ruler className="w-5 h-5 text-indigo-600" />
             <h3 className="font-bold text-slate-800">Calibrage des Marges Physiques (X / Y)</h3>
@@ -380,7 +380,7 @@ export default function PrinterSettingsPage() {
                     step="0.5"
                     value={topOffset}
                     onChange={(e) => setTopOffset(parseFloat(e.target.value) || 0)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30"
                   />
                   <span className="absolute right-3 top-2.5 text-xs font-bold text-slate-400">mm</span>
                 </div>
@@ -399,7 +399,7 @@ export default function PrinterSettingsPage() {
                     step="0.5"
                     value={leftOffset}
                     onChange={(e) => setLeftOffset(parseFloat(e.target.value) || 0)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30"
                   />
                   <span className="absolute right-3 top-2.5 text-xs font-bold text-slate-400">mm</span>
                 </div>
@@ -419,7 +419,7 @@ export default function PrinterSettingsPage() {
                   onClick={() => setOrientation("LANDSCAPE")}
                   className={`py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
                     orientation === "LANDSCAPE"
-                      ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                      ? "bg-[#1E3A8A] text-white border-[#1E3A8A] shadow-sm"
                       : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
                   }`}
                 >
@@ -431,7 +431,7 @@ export default function PrinterSettingsPage() {
                   onClick={() => setOrientation("PORTRAIT")}
                   className={`py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
                     orientation === "PORTRAIT"
-                      ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                      ? "bg-[#1E3A8A] text-white border-[#1E3A8A] shadow-sm"
                       : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
                   }`}
                 >
@@ -444,7 +444,7 @@ export default function PrinterSettingsPage() {
         </div>
 
         {/* Section 3: Dimensions Papier Chèques */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-5">
+        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-5">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
             <FileText className="w-5 h-5 text-emerald-600" />
             <h3 className="font-bold text-slate-800">Dimensions du Papier Chèque (mm)</h3>
@@ -494,7 +494,7 @@ export default function PrinterSettingsPage() {
         </div>
 
         {/* Section 4: Dimensions Papier Effets / LCN */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-5">
+        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-5">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
             <Sliders className="w-5 h-5 text-amber-600" />
             <h3 className="font-bold text-slate-800">Dimensions du Papier Effet / LCN (mm)</h3>
@@ -545,7 +545,7 @@ export default function PrinterSettingsPage() {
       </div>
 
       {/* Save bar bottom */}
-      <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-lg flex items-center justify-between">
+      <div className="bg-[#0F172A] text-white rounded-xl p-5 shadow-lg flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Zap className="w-5 h-5 text-amber-400" />
           <div>
@@ -556,7 +556,7 @@ export default function PrinterSettingsPage() {
 
         <button
           onClick={handleSave}
-          className="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-xl shadow-md transition-all"
+          className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white font-bold text-sm rounded-xl shadow-md transition-all"
         >
           <Save className="w-4 h-4" />
           <span>Sauvegarder</span>

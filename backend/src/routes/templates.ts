@@ -5,6 +5,10 @@ import { generateCalibratedPDF, FieldToPrint } from "../lib/pdfGenerator";
 
 const router = Router();
 
+function isAdmin(req: any): boolean {
+  return req.user!.role === "ADMIN";
+}
+
 router.get("/", authMiddleware, async (req, res) => {
   const bankId = req.query.bankId as string;
   const documentType = req.query.documentType as string;
@@ -13,10 +17,16 @@ router.get("/", authMiddleware, async (req, res) => {
   if (bankId) where.bankId = bankId;
   if (documentType) where.documentType = documentType;
 
+  if (!isAdmin(req)) {
+    where.templateEntities = {
+      some: { entityId: req.user!.entityId },
+    };
+  }
+
   try {
     const templates = await prisma.template.findMany({
       where,
-      include: { bank: true, fields: true },
+      include: { bank: true, fields: true, templateEntities: { include: { entity: true } } },
       orderBy: { createdAt: "desc" },
     });
     return res.json(templates);
@@ -29,11 +39,18 @@ router.get("/:id", authMiddleware, async (req, res) => {
   try {
     const template = await prisma.template.findUnique({
       where: { id: req.params.id },
-      include: { bank: true, fields: true },
+      include: { bank: true, fields: true, templateEntities: { include: { entity: true } } },
     });
 
     if (!template) {
       return res.status(404).json({ error: "Modèle d'impression non trouvé." });
+    }
+
+    if (!isAdmin(req)) {
+      const hasAccess = template.templateEntities.some((te) => te.entityId === req.user!.entityId);
+      if (!hasAccess) {
+        return res.status(403).json({ error: "Accès refusé." });
+      }
     }
 
     return res.json(template);
@@ -46,7 +63,7 @@ router.post("/", authMiddleware, canEditOnly, async (req, res) => {
   try {
     const {
       bankId, documentType, name, backgroundImageUrl,
-      physicalWidthMm, physicalHeightMm, isActive, fields,
+      physicalWidthMm, physicalHeightMm, isActive, fields, entityIds,
     } = req.body;
 
     if (!bankId || !documentType || !name) {
@@ -69,6 +86,9 @@ router.post("/", authMiddleware, canEditOnly, async (req, res) => {
         physicalWidthMm: physicalWidthMm ? parseFloat(physicalWidthMm) : 210,
         physicalHeightMm: physicalHeightMm ? parseFloat(physicalHeightMm) : 100,
         isActive: isActive !== undefined ? isActive : true,
+        templateEntities: {
+          create: (entityIds || []).map((entityId: string) => ({ entityId })),
+        },
         fields: {
           create: (fields || []).map((f: any) => ({
             fieldKey: f.fieldKey,
@@ -82,7 +102,7 @@ router.post("/", authMiddleware, canEditOnly, async (req, res) => {
           })),
         },
       },
-      include: { fields: true, bank: true },
+      include: { fields: true, bank: true, templateEntities: { include: { entity: true } } },
     });
 
     await prisma.auditLog.create({
@@ -104,11 +124,21 @@ router.post("/", authMiddleware, canEditOnly, async (req, res) => {
 router.put("/:id", authMiddleware, canEditOnly, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, backgroundImageUrl, physicalWidthMm, physicalHeightMm, isActive, fields } = req.body;
+    const { name, backgroundImageUrl, physicalWidthMm, physicalHeightMm, isActive, fields, entityIds } = req.body;
 
-    const existingTemplate = await prisma.template.findUnique({ where: { id } });
+    const existingTemplate = await prisma.template.findUnique({
+      where: { id },
+      include: { templateEntities: true },
+    });
     if (!existingTemplate) {
       return res.status(404).json({ error: "Modèle d'impression non trouvé." });
+    }
+
+    if (!isAdmin(req)) {
+      const hasAccess = existingTemplate.templateEntities.some((te) => te.entityId === req.user!.entityId);
+      if (!hasAccess) {
+        return res.status(403).json({ error: "Accès refusé." });
+      }
     }
 
     if (isActive && !existingTemplate.isActive) {
@@ -119,6 +149,15 @@ router.put("/:id", authMiddleware, canEditOnly, async (req, res) => {
     }
 
     const updatedTemplate = await prisma.$transaction(async (tx) => {
+      if (entityIds !== undefined) {
+        await tx.templateEntity.deleteMany({ where: { templateId: id } });
+        if (entityIds.length > 0) {
+          await tx.templateEntity.createMany({
+            data: entityIds.map((entityId: string) => ({ templateId: id, entityId })),
+          });
+        }
+      }
+
       if (fields) {
         await tx.templateField.deleteMany({ where: { templateId: id } });
       }
@@ -146,7 +185,7 @@ router.put("/:id", authMiddleware, canEditOnly, async (req, res) => {
               }
             : undefined,
         },
-        include: { fields: true, bank: true },
+        include: { fields: true, bank: true, templateEntities: { include: { entity: true } } },
       });
     });
 
@@ -194,6 +233,7 @@ router.delete("/:id", authMiddleware, async (req, res) => {
       }
 
       await tx.templateField.deleteMany({ where: { templateId: id } });
+      await tx.templateEntity.deleteMany({ where: { templateId: id } });
       await tx.template.delete({ where: { id } });
     });
 

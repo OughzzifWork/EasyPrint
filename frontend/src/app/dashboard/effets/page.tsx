@@ -20,6 +20,7 @@ import {
   RotateCcw,
   Clock,
   CheckCheck,
+  UserCheck,
 } from "lucide-react";
 import { clsx } from "clsx";
 
@@ -30,6 +31,7 @@ export default function EffetsPage() {
 
   const [effets, setEffets] = useState<any[]>([]);
   const [banks, setBanks] = useState<any[]>([]);
+  const [entities, setEntities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Active Tab: "ACTIVE" (En cours), "PRINTED" (Déjà Imprimé), "DELETED" (Déjà Supprimé)
@@ -38,6 +40,7 @@ export default function EffetsPage() {
   // Filters
   const [search, setSearch] = useState("");
   const [selectedBankId, setSelectedBankId] = useState("");
+  const [selectedEntityId, setSelectedEntityId] = useState("");
 
   // Notifications
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +60,8 @@ export default function EffetsPage() {
   const [bankId, setBankId] = useState("");
   const [sapCode, setSapCode] = useState("");
   const [beneficiary, setBeneficiary] = useState("");
+  const [beneficiarySearch, setBeneficiarySearch] = useState("");
+  const [showBeneficiaryDropdown, setShowBeneficiaryDropdown] = useState(false);
   const [dueDate, setDueDate] = useState("");
   const [amountNumeric, setAmountNumeric] = useState<string>("");
   const [amountWords, setAmountWords] = useState("");
@@ -136,8 +141,18 @@ export default function EffetsPage() {
     }
   };
 
+  const fetchEntities = async () => {
+    try {
+      const data = await fetchApi("/api/entities");
+      setEntities(Array.isArray(data) ? data.filter((e: any) => e.active) : []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchBanks();
+    fetchEntities();
   }, []);
 
   useEffect(() => {
@@ -271,7 +286,7 @@ export default function EffetsPage() {
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Effets_LCN");
-    XLSX.writeFile(workbook, `Effets_IMPCE_${new Date().toISOString().split("T")[0]}.xlsx`);
+    XLSX.writeFile(workbook, `Effets_EasyPrint_${new Date().toISOString().split("T")[0]}.xlsx`);
   };
 
   const handleBatchImportSubmit = async (e: React.FormEvent) => {
@@ -383,6 +398,8 @@ export default function EffetsPage() {
 
     if (!matchesSearch) return false;
 
+    if (selectedEntityId && e.entityId !== selectedEntityId) return false;
+
     if (activeTab === "ACTIVE") return !e.deletedAt && e.status !== "PRINTED";
     if (activeTab === "PRINTED") return !e.deletedAt && e.status === "PRINTED";
     if (activeTab === "DELETED") return e.deletedAt != null;
@@ -394,7 +411,7 @@ export default function EffetsPage() {
       <Header title="Gestion & Saisie des Effets (Lettres de Change - LCN)" />
 
       {/* Action Bar */}
-      <div className="flex flex-col lg:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col lg:flex-row items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
           {/* Search Input */}
           <div className="relative w-full sm:w-64">
@@ -404,7 +421,7 @@ export default function EffetsPage() {
               placeholder="Rechercher code SAP, bénéficiaire..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#A16207]/30"
             />
           </div>
 
@@ -412,7 +429,7 @@ export default function EffetsPage() {
           <select
             value={selectedBankId}
             onChange={(e) => setSelectedBankId(e.target.value)}
-            className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium"
+            className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#A16207]/30 font-medium"
           >
             <option value="">Toutes les banques</option>
             {banks.map((b) => (
@@ -421,6 +438,22 @@ export default function EffetsPage() {
               </option>
             ))}
           </select>
+
+          {/* Entity Filter */}
+          {isAdmin && entities.length > 0 && (
+            <select
+              value={selectedEntityId}
+              onChange={(e) => setSelectedEntityId(e.target.value)}
+              className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#A16207]/30 font-medium"
+            >
+              <option value="">Toutes les entités</option>
+              {entities.map((ent) => (
+                <option key={ent.id} value={ent.id}>
+                  {ent.name} ({ent.code})
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div className="flex items-center gap-3 w-full lg:w-auto justify-end">
@@ -447,7 +480,7 @@ export default function EffetsPage() {
                   resetForm();
                   setIsCreateOpen(true);
                 }}
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-semibold text-sm rounded-xl shadow-md shadow-amber-500/20 transition-all"
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#A16207] hover:bg-[#925506] text-white font-semibold text-sm rounded-xl shadow-sm transition-all"
               >
                 <Plus className="w-4 h-4" />
                 <span>Nouvel Effet (LCN)</span>
@@ -458,13 +491,13 @@ export default function EffetsPage() {
       </div>
 
       {/* 3 TABS NAVIGATION */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-1 overflow-x-auto">
+      <div className="flex items-center gap-2 border-b border-slate-200/80 pb-1 overflow-x-auto">
         <button
           onClick={() => setActiveTab("ACTIVE")}
           className={clsx(
             "flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all border",
             activeTab === "ACTIVE"
-              ? "bg-amber-600 text-white border-amber-600 shadow-sm"
+              ? "bg-[#A16207] text-white border-[#A16207] shadow-sm"
               : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
           )}
         >
@@ -548,7 +581,7 @@ export default function EffetsPage() {
       )}
 
       {/* DataGrid */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-slate-400 font-medium">Chargement des effets...</div>
         ) : filteredEffets.length === 0 ? (
@@ -558,12 +591,15 @@ export default function EffetsPage() {
             <table className="w-full text-left text-sm text-slate-600">
               <thead className="bg-slate-50 text-slate-500 uppercase text-[11px] tracking-wider font-semibold border-b border-slate-200">
                 <tr>
-                  <th className="py-3.5 px-6">Code SAP</th>
+                  <th className="py-3.5 px-6">Entité</th>
                   <th className="py-3.5 px-6">Banque</th>
+                  <th className="py-3.5 px-6">Code SAP</th>
                   <th className="py-3.5 px-6">Bénéficiaire</th>
                   <th className="py-3.5 px-6">Échéance</th>
                   <th className="py-3.5 px-6">Montant (#)</th>
-                  <th className="py-3.5 px-6">Motif / Cause</th>
+                  <th className="py-3.5 px-6">Créé par</th>
+                  <th className="py-3.5 px-6">Date création</th>
+                  <th className="py-3.5 px-6">Date impression</th>
                   <th className="py-3.5 px-6">Statut</th>
                   <th className="py-3.5 px-6 text-right">Actions</th>
                 </tr>
@@ -577,22 +613,27 @@ export default function EffetsPage() {
                       e.deletedAt && "bg-rose-50/40 opacity-70 italic"
                     )}
                   >
-                    <td className="py-4 px-6 font-mono font-bold text-slate-900">{e.sapCode}</td>
+                    <td className="py-4 px-6">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 text-xs font-semibold">
+                        {e.entity?.code || "—"}
+                      </span>
+                    </td>
                     <td className="py-4 px-6">
                       <span className="bg-slate-100 px-2.5 py-1 rounded border border-slate-200 text-xs font-mono font-bold text-slate-800">
                         {e.bank?.code || "BANQUE"}
                       </span>
                     </td>
+                    <td className="py-4 px-6 font-mono font-bold text-slate-900">{e.sapCode}</td>
                     <td className="py-4 px-6 font-semibold text-slate-900">{e.beneficiary}</td>
                     <td className="py-4 px-6 font-semibold text-amber-700">
                       {e.dueDate ? new Date(e.dueDate).toLocaleDateString("fr-FR") : "-"}
                     </td>
-                    <td className="py-4 px-6 font-mono font-bold text-blue-700">
+                    <td className="py-4 px-6 font-mono font-bold text-[#1E3A8A]">
                       {e.amountNumeric.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} #
                     </td>
-                    <td className="py-4 px-6 text-xs text-slate-500 max-w-xs truncate" title={e.cause}>
-                      {e.cause || "-"}
-                    </td>
+                    <td className="py-4 px-6 text-xs text-slate-600">{e.createdByName || "—"}</td>
+                    <td className="py-4 px-6 text-xs text-slate-500">{e.createdAt ? new Date(e.createdAt).toLocaleDateString("fr-FR") : "—"}</td>
+                    <td className="py-4 px-6 text-xs text-slate-500">{e.printedAt ? new Date(e.printedAt).toLocaleDateString("fr-FR") : "—"}</td>
                     <td className="py-4 px-6">
                       {e.deletedAt ? (
                         <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700 border border-rose-200">
@@ -604,7 +645,7 @@ export default function EffetsPage() {
                             "px-2.5 py-1 rounded-full text-xs font-bold uppercase border",
                             e.status === "PRINTED"
                               ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              : "bg-amber-50 text-amber-700 border-amber-200"
+                              : "bg-[#A16207]/10 text-[#A16207] border-[#A16207]/20"
                           )}
                         >
                           {e.status}
@@ -659,7 +700,7 @@ export default function EffetsPage() {
                             ) : (
                               <button
                                 onClick={() => openPrintPdfModal(e.id)}
-                                className="inline-flex items-center gap-1 p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors text-xs font-semibold"
+                                className="inline-flex items-center gap-1 p-2 text-[#A16207] hover:bg-[#A16207]/5 rounded-lg transition-colors text-xs font-semibold"
                                 title="Imprimer la Lettre de Change"
                               >
                                 <Printer className="w-4 h-4" /> Imprimer
@@ -679,7 +720,7 @@ export default function EffetsPage() {
                                 ) : (
                                   <button
                                     onClick={() => openEditModal(e)}
-                                    className="p-2 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                    className="p-2 text-slate-500 hover:text-[#A16207] hover:bg-[#A16207]/5 rounded-lg transition-colors"
                                     title="Modifier"
                                   >
                                     <Edit2 className="w-4 h-4" />
@@ -718,8 +759,8 @@ export default function EffetsPage() {
 
       {/* Modal Saisie Effet */}
       {isCreateOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl max-w-xl w-full p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-bold text-lg text-slate-900 flex items-center gap-2">
                 <FileSpreadsheet className="w-5 h-5 text-amber-600" />
@@ -737,7 +778,7 @@ export default function EffetsPage() {
                   <select
                     value={bankId}
                     onChange={(e) => setBankId(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 font-semibold"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#A16207]/30 font-semibold"
                   >
                     {banks.map((b) => (
                       <option key={b.id} value={b.id}>
@@ -754,29 +795,71 @@ export default function EffetsPage() {
                     value={sapCode}
                     onChange={(e) => setSapCode(e.target.value)}
                     placeholder="ex: SAP-80291 (Optionnel)"
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#A16207]/30"
                   />
                 </div>
               </div>
 
-              <div>
+              <div className="relative">
                 <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">
-                  Nom du Bénéficiaire (Propositions enregistrées)
+                  Nom du Bénéficiaire
                 </label>
-                <input
-                  type="text"
-                  required
-                  list="effets-beneficiaries-list"
-                  value={beneficiary}
-                  onChange={(e) => setBeneficiary(e.target.value)}
-                  placeholder="Tapez ou sélectionnez un bénéficiaire enregistré..."
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium"
-                />
-                <datalist id="effets-beneficiaries-list">
-                  {storedBeneficiaries.map((b: any) => (
-                    <option key={b.id || b.name} value={b.name} />
-                  ))}
-                </datalist>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      required
+                      value={beneficiary}
+                      onChange={(e) => {
+                        setBeneficiary(e.target.value);
+                        setBeneficiarySearch(e.target.value);
+                        setShowBeneficiaryDropdown(true);
+                      }}
+                      onFocus={() => setShowBeneficiaryDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowBeneficiaryDropdown(false), 200)}
+                      placeholder="Tapez pour rechercher ou sélectionnez..."
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#A16207]/30 font-medium"
+                    />
+                    {showBeneficiaryDropdown && storedBeneficiaries.length > 0 && (
+                      <div className="absolute z-20 top-full mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                        {storedBeneficiaries
+                          .filter((b: any) => b.name.toLowerCase().includes(beneficiarySearch.toLowerCase()))
+                          .map((b: any) => (
+                            <button
+                              key={b.id || b.name}
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => {
+                                setBeneficiary(b.name);
+                                setShowBeneficiaryDropdown(false);
+                              }}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 flex items-center gap-2"
+                            >
+                              <UserCheck className="w-3.5 h-3.5 text-slate-400" />
+                              <span className="font-semibold text-slate-800">{b.name}</span>
+                              {b.category && <span className="text-[10px] text-slate-400 ml-auto">{b.category}</span>}
+                            </button>
+                          ))
+                          .slice(0, 20)}
+                        {beneficiarySearch && !storedBeneficiaries.some((b: any) => b.name.toLowerCase() === beneficiarySearch.toLowerCase()) && (
+                          <button
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                              setBeneficiary(beneficiarySearch);
+                              setShowBeneficiaryDropdown(false);
+                            }}
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 flex items-center gap-2 border-t border-slate-100"
+                          >
+                            <Plus className="w-3.5 h-3.5 text-emerald-500" />
+                            <span className="text-emerald-700 font-semibold">Utiliser "{beneficiarySearch}"</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">Sélectionnez dans la liste ou tapez un nouveau nom</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -787,7 +870,7 @@ export default function EffetsPage() {
                     required
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#A16207]/30"
                   />
                 </div>
 
@@ -800,7 +883,7 @@ export default function EffetsPage() {
                     value={amountNumeric}
                     onChange={(e) => handleAmountNumericChange(e.target.value)}
                     placeholder="ex: 45000.00"
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#A16207]/30"
                   />
                 </div>
               </div>
@@ -813,7 +896,7 @@ export default function EffetsPage() {
                   rows={2}
                   value={amountWords}
                   onChange={(e) => setAmountWords(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#A16207]/30 font-medium"
                 />
               </div>
 
@@ -825,7 +908,7 @@ export default function EffetsPage() {
                     value={cause}
                     onChange={(e) => setCause(e.target.value)}
                     placeholder="ex: Règlement Facture N° 4021"
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#A16207]/30"
                   />
                 </div>
 
@@ -835,7 +918,7 @@ export default function EffetsPage() {
                     type="text"
                     value={creationPlace}
                     onChange={(e) => setCreationPlace(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#A16207]/30"
                   />
                 </div>
               </div>
@@ -850,7 +933,7 @@ export default function EffetsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold rounded-xl shadow-md shadow-amber-500/20"
+                  className="px-4 py-2 bg-[#A16207] hover:bg-[#925506] text-white text-sm font-semibold rounded-xl shadow-sm"
                 >
                   Enregistrer l'effet
                 </button>
@@ -862,8 +945,8 @@ export default function EffetsPage() {
 
       {/* Modal Edit Effet */}
       {isEditOpen && selectedEffet && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl max-w-xl w-full p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-bold text-lg text-slate-900">Modifier l'effet {selectedEffet.sapCode}</h3>
               <button onClick={() => setIsEditOpen(false)} className="text-slate-400 hover:text-slate-600">
@@ -895,16 +978,59 @@ export default function EffetsPage() {
                 </div>
               </div>
 
-              <div>
+              <div className="relative">
                 <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Nom du Bénéficiaire</label>
                 <input
                   type="text"
                   required
-                  list="effets-beneficiaries-list"
                   value={beneficiary}
-                  onChange={(e) => setBeneficiary(e.target.value)}
+                  onChange={(e) => {
+                    setBeneficiary(e.target.value);
+                    setBeneficiarySearch(e.target.value);
+                    setShowBeneficiaryDropdown(true);
+                  }}
+                  onFocus={() => setShowBeneficiaryDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowBeneficiaryDropdown(false), 200)}
+                  placeholder="Tapez pour rechercher ou sélectionnez..."
                   className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium"
                 />
+                {showBeneficiaryDropdown && storedBeneficiaries.length > 0 && (
+                  <div className="absolute z-20 top-full mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                    {storedBeneficiaries
+                      .filter((b: any) => b.name.toLowerCase().includes(beneficiarySearch.toLowerCase()))
+                      .map((b: any) => (
+                        <button
+                          key={b.id || b.name}
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setBeneficiary(b.name);
+                            setShowBeneficiaryDropdown(false);
+                          }}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 flex items-center gap-2"
+                        >
+                          <UserCheck className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="font-semibold text-slate-800">{b.name}</span>
+                          {b.category && <span className="text-[10px] text-slate-400 ml-auto">{b.category}</span>}
+                        </button>
+                      ))
+                      .slice(0, 20)}
+                    {beneficiarySearch && !storedBeneficiaries.some((b: any) => b.name.toLowerCase() === beneficiarySearch.toLowerCase()) && (
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          setBeneficiary(beneficiarySearch);
+                          setShowBeneficiaryDropdown(false);
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 flex items-center gap-2 border-t border-slate-100"
+                      >
+                        <Plus className="w-3.5 h-3.5 text-emerald-500" />
+                        <span className="text-emerald-700 font-semibold">Utiliser "{beneficiarySearch}"</span>
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -950,7 +1076,7 @@ export default function EffetsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold rounded-xl shadow-md shadow-amber-500/20"
+                  className="px-4 py-2 bg-[#A16207] hover:bg-[#925506] text-white text-sm font-semibold rounded-xl shadow-sm"
                 >
                   Mettre à jour
                 </button>
@@ -962,8 +1088,8 @@ export default function EffetsPage() {
 
       {/* Modal Batch Import Excel */}
       {isImportOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-bold text-lg text-slate-900 flex items-center gap-2">
                 <Upload className="w-5 h-5 text-amber-600" />
@@ -1001,7 +1127,7 @@ export default function EffetsPage() {
                   accept=".xlsx, .xls, .csv"
                   required
                   onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-                  className="w-full text-xs text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100"
+                  className="w-full text-xs text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#A16207]/10 file:text-[#A16207] hover:file:bg-[#A16207]/20"
                 />
               </div>
 
@@ -1027,7 +1153,7 @@ export default function EffetsPage() {
                 <button
                   type="submit"
                   disabled={importing || !importFile}
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-sm font-semibold rounded-xl shadow-md shadow-amber-500/20 flex items-center gap-2"
+                  className="px-4 py-2 bg-[#A16207] hover:bg-[#925506] disabled:opacity-50 text-white text-sm font-semibold rounded-xl shadow-sm flex items-center gap-2"
                 >
                   {importing && <Upload className="w-4 h-4 animate-spin" />}
                   <span>Lancer l'importation</span>
@@ -1041,7 +1167,7 @@ export default function EffetsPage() {
       {/* PDF Modal Viewer */}
       {isPrintOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-4xl w-full h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+          <div className="bg-white rounded-xl max-w-4xl w-full h-[85vh] flex flex-col overflow-hidden shadow-xl">
             <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
               <h3 className="font-bold text-sm flex items-center gap-2">
                 <Printer className="w-4 h-4 text-amber-400" />

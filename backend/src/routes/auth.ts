@@ -14,7 +14,10 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ error: "Veuillez saisir votre nom d'utilisateur et votre mot de passe." });
     }
 
-    const user = await prisma.user.findUnique({ where: { username } });
+    const user = await prisma.user.findUnique({
+      where: { username },
+      include: { entity: true },
+    });
 
     if (!user) {
       return res.status(401).json({ error: "Nom d'utilisateur ou mot de passe incorrect." });
@@ -34,6 +37,9 @@ router.post("/login", async (req, res) => {
       username: user.username,
       fullName: user.fullName,
       role: user.role,
+      entityId: user.entityId,
+      entityName: user.entity?.name || null,
+      entityDataMode: user.entity?.dataMode || null,
       canEdit: user.canEdit,
       active: user.active,
     };

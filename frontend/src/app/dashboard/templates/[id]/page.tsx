@@ -21,6 +21,7 @@ export default function EditTemplatePage() {
   const id = params?.id as string;
 
   const [template, setTemplate] = useState<any>(null);
+  const [entities, setEntities] = useState<{ id: string; name: string; code: string; active: boolean }[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Form fields
@@ -30,6 +31,7 @@ export default function EditTemplatePage() {
   const [backgroundImageUrl, setBackgroundImageUrl] = useState<string | null>(null);
   const [isActive, setIsActive] = useState<boolean>(true);
   const [fields, setFields] = useState<TemplateFieldItem[]>([]);
+  const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
 
   // UI states
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,13 +49,21 @@ export default function EditTemplatePage() {
         setBackgroundImageUrl(data.backgroundImageUrl);
         setIsActive(data.isActive);
         setFields(data.fields || []);
+        setSelectedEntityIds(data.templateEntities?.map((te: any) => te.entityId) || []);
       } catch (err: any) {
         setError(err.message);
       } finally {
         setLoading(false);
       }
     };
+    const fetchEntities = async () => {
+      try {
+        const data = await fetchApi("/api/entities");
+        setEntities(data);
+      } catch {}
+    };
     if (id) fetchTemplate();
+    fetchEntities();
   }, [id]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -107,6 +117,7 @@ export default function EditTemplatePage() {
           backgroundImageUrl,
           isActive,
           fields,
+          entityIds: selectedEntityIds,
         }),
       });
 
@@ -122,7 +133,7 @@ export default function EditTemplatePage() {
     return (
       <div className="space-y-6">
         <Header title="Édition du Modèle" />
-        <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center text-slate-400">
+        <div className="bg-white p-12 rounded-xl border border-slate-200 text-center text-slate-400">
           Chargement du modèle...
         </div>
       </div>
@@ -133,7 +144,7 @@ export default function EditTemplatePage() {
     return (
       <div className="space-y-6">
         <Header title="Erreur" />
-        <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center text-rose-600">
+        <div className="bg-white p-12 rounded-xl border border-slate-200 text-center text-rose-600">
           Modèle d'impression non trouvé.
         </div>
       </div>
@@ -144,7 +155,7 @@ export default function EditTemplatePage() {
     <div className="space-y-6 pb-12">
       <Header title={`Modifier le Modèle : ${template.name}`} />
 
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
         <button
           onClick={() => router.back()}
           className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900"
@@ -167,7 +178,7 @@ export default function EditTemplatePage() {
             type="button"
             onClick={handleSave}
             disabled={isSubmitting}
-            className="inline-flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl shadow-md shadow-blue-500/20 transition-all disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-5 py-2 bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white text-sm font-semibold rounded-xl shadow-sm transition-all disabled:opacity-50"
           >
             <Save className="w-4 h-4" />
             <span>{isSubmitting ? "Enregistrement..." : "Mettre à jour le Modèle"}</span>
@@ -188,7 +199,7 @@ export default function EditTemplatePage() {
       )}
 
       {/* Meta card */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+      <div className="bg-white p-6 rounded-xl border border-slate-200/80 shadow-sm space-y-4">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <h3 className="font-bold text-slate-900 text-base">Caractéristiques du Modèle</h3>
           <span className="text-xs font-mono font-bold bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-100">
@@ -231,7 +242,7 @@ export default function EditTemplatePage() {
           <div>
             <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Changer Scan</label>
             <label className="w-full flex items-center justify-center gap-2 px-3.5 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl cursor-pointer text-xs font-semibold">
-              <Upload className="w-4 h-4 text-blue-600" />
+              <Upload className="w-4 h-4 text-[#1E3A8A]" />
               <span>Charger Image</span>
               <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
             </label>
@@ -244,11 +255,32 @@ export default function EditTemplatePage() {
               type="checkbox"
               checked={isActive}
               onChange={(e) => setIsActive(e.target.checked)}
-              className="rounded text-blue-600 w-4 h-4"
+              className="rounded text-[#1E3A8A] w-4 h-4"
             />
             <span>Définir comme modèle actif pour cette banque</span>
           </label>
         </div>
+
+        {/* Entity multi-select */}
+        {entities.length > 0 && (
+          <div className="pt-3 border-t border-slate-100">
+            <label className="block text-xs font-semibold uppercase text-slate-600 mb-2">Entités autorisées</label>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-40 overflow-y-auto p-3 bg-slate-50 rounded-xl border border-slate-200">
+              {entities.filter((e) => e.active).map((entity) => (
+                <label key={entity.id} className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer hover:bg-white px-2 py-1 rounded-lg">
+                  <input
+                    type="checkbox"
+                    checked={selectedEntityIds.includes(entity.id)}
+                    onChange={() => setSelectedEntityIds((prev) => prev.includes(entity.id) ? prev.filter((e) => e !== entity.id) : [...prev, entity.id])}
+                    className="rounded text-[#1E3A8A] w-4 h-4"
+                  />
+                  <span className="truncate">{entity.name}</span>
+                  <span className="text-[10px] font-mono text-slate-400">{entity.code}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Visual Canvas Designer */}
@@ -265,7 +297,7 @@ export default function EditTemplatePage() {
       {/* PDF Modal */}
       {previewPdfUrl && (
         <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-4xl w-full h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+          <div className="bg-white rounded-xl max-w-4xl w-full h-[85vh] flex flex-col overflow-hidden shadow-xl">
             <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
               <h3 className="font-bold text-sm">Aperçu PDF Calibré</h3>
               <button

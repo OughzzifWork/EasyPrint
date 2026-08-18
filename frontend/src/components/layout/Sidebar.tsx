@@ -4,22 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import {
-  FileCheck2,
-  FileSpreadsheet,
-  Building2,
-  LayoutTemplate,
-  Users,
-  History,
-  LayoutDashboard,
-  LogOut,
-  ChevronRight,
-  ShieldCheck,
-  Building,
-  Printer,
-  UserCheck,
-  PanelLeftClose,
-  PanelLeft,
-  X,
+  FileCheck2, FileSpreadsheet, Building2, LayoutTemplate, Users,
+  History, LayoutDashboard, LogOut, ChevronRight, ShieldCheck,
+  Building, Printer, UserCheck, PanelLeftClose, PanelLeft, X, Landmark,
 } from "lucide-react";
 import { clsx } from "clsx";
 
@@ -35,129 +22,84 @@ export function Sidebar({ collapsed = false, onToggle, onCloseMobile }: SidebarP
   const role = user?.role || "VISITEUR";
 
   const navigation = [
-    { name: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard, roles: ["ADMIN", "COMPTABLE", "VISITEUR"] },
-    { name: "Chèques", href: "/dashboard/cheques", icon: FileCheck2, roles: ["ADMIN", "COMPTABLE", "VISITEUR"] },
-    { name: "Effets (LCN)", href: "/dashboard/effets", icon: FileSpreadsheet, roles: ["ADMIN", "COMPTABLE", "VISITEUR"] },
-    { name: "Banques", href: "/dashboard/banks", icon: Building2, roles: ["ADMIN", "COMPTABLE", "VISITEUR"] },
-    { name: "Bénéficiaires", href: "/dashboard/beneficiaries", icon: UserCheck, roles: ["ADMIN", "COMPTABLE", "VISITEUR"] },
-    { name: "Modèles d'impression", href: "/dashboard/templates", icon: LayoutTemplate, roles: ["ADMIN", "COMPTABLE", "VISITEUR"] },
-    { name: "Paramètres d'imprimante", href: "/dashboard/printer-settings", icon: Printer, roles: ["ADMIN"] },
-    { name: "Utilisateurs", href: "/dashboard/users", icon: Users, roles: ["ADMIN"] },
-    { name: "Journal d'audit", href: "/dashboard/audit", icon: History, roles: ["ADMIN", "COMPTABLE"] },
+    { name: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard, roles: ["ADMIN", "COMPTABLE", "VISITEUR"], color: "text-blue-500" },
+    { name: "Chèques", href: "/dashboard/cheques", icon: FileCheck2, roles: ["ADMIN", "COMPTABLE", "VISITEUR"], color: "text-emerald-500" },
+    { name: "Effets (LCN)", href: "/dashboard/effets", icon: FileSpreadsheet, roles: ["ADMIN", "COMPTABLE", "VISITEUR"], color: "text-orange-500" },
+    { name: "Banques", href: "/dashboard/banks", icon: Building2, roles: ["ADMIN", "COMPTABLE", "VISITEUR"], color: "text-violet-500" },
+    { name: "Bénéficiaires", href: "/dashboard/beneficiaries", icon: UserCheck, roles: ["ADMIN", "COMPTABLE", "VISITEUR"], color: "text-pink-500" },
+    { name: "Modèles d'impression", href: "/dashboard/templates", icon: LayoutTemplate, roles: ["ADMIN", "COMPTABLE", "VISITEUR"], color: "text-blue-500" },
+    { name: "Paramètres d'imprimante", href: "/dashboard/printer-settings", icon: Printer, roles: ["ADMIN"], color: "text-emerald-500" },
+    { name: "Utilisateurs", href: "/dashboard/users", icon: Users, roles: ["ADMIN"], color: "text-violet-500" },
+    { name: "Entités", href: "/dashboard/entities", icon: Landmark, roles: ["ADMIN"], color: "text-emerald-500" },
+    { name: "Journal d'audit", href: "/dashboard/audit", icon: History, roles: ["ADMIN"], color: "text-orange-500" },
   ];
 
   const filteredNav = navigation.filter((item) => item.roles.includes(role));
 
   return (
-    <aside
-      className={clsx(
-        "bg-slate-900 text-slate-100 flex flex-col h-full w-full border-r border-slate-800 shadow-xl transition-all duration-300"
-      )}
-    >
-      <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+    <aside className="glass-sidebar flex flex-col h-full w-full transition-all duration-300 rounded-r-2xl">
+      <div className="p-4 border-b border-slate-100 flex items-center justify-between">
         <div className="flex items-center gap-3 overflow-hidden">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/30 shrink-0">
-            <Building className="w-5 h-5 text-white" />
-          </div>
+          <img src="/logo.png" alt="EasyPrint Logo" className="w-9 h-9 rounded-xl object-contain shrink-0" />
           {!collapsed && (
             <div className="truncate">
-              <h1 className="font-bold text-base tracking-wide text-white leading-tight">IMPCE Web</h1>
-              <p className="text-[11px] text-slate-400 font-medium truncate">Chèques & Effets</p>
+              <h1 className="font-bold text-sm tracking-tight text-slate-900 leading-tight font-display">EasyPrint</h1>
+              <p className="text-[10px] text-slate-400 font-medium truncate">Chèques & Effets</p>
             </div>
           )}
         </div>
-
         {onCloseMobile && (
-          <button
-            onClick={onCloseMobile}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg lg:hidden"
-            title="Fermer le menu"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <button onClick={onCloseMobile} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg lg:hidden"><X className="w-4 h-4" /></button>
         )}
-
         {onToggle && !onCloseMobile && (
-          <button
-            onClick={onToggle}
-            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg hidden lg:block transition-colors"
-            title={collapsed ? "Agrandir le menu" : "Masquer / Réduire le menu"}
-          >
-            {collapsed ? <PanelLeft className="w-5 h-5 text-blue-400" /> : <PanelLeftClose className="w-5 h-5" />}
+          <button onClick={onToggle} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg hidden lg:block transition-colors" title={collapsed ? "Agrandir" : "Masquer"}>
+            {collapsed ? <PanelLeft className="w-4 h-4 text-blue-500" /> : <PanelLeftClose className="w-4 h-4" />}
           </button>
         )}
       </div>
 
       {!collapsed ? (
-        <div className="p-3.5 bg-slate-950/50 border-b border-slate-800/80 flex items-center justify-between">
+        <div className="px-4 py-3 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
           <div className="overflow-hidden">
-            <p className="text-xs font-semibold text-slate-200 truncate">{user?.fullName || "Utilisateur"}</p>
+            <p className="text-xs font-semibold text-slate-800 truncate">{user?.fullName || "Utilisateur"}</p>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <span
-                className={clsx(
-                  "inline-block w-2 h-2 rounded-full",
-                  role === "ADMIN" ? "bg-emerald-400" : role === "COMPTABLE" ? "bg-blue-400" : "bg-amber-400"
-                )}
-              />
+              <span className={clsx("inline-block w-1.5 h-1.5 rounded-full", role === "ADMIN" ? "bg-emerald-400" : role === "COMPTABLE" ? "bg-blue-400" : "bg-slate-300")} />
               <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{role}</span>
+              {user?.entityName && <span className="text-[10px] text-slate-300 ml-1 truncate max-w-[100px]">· {user.entityName}</span>}
             </div>
           </div>
-          <ShieldCheck className="w-4 h-4 text-slate-500 shrink-0" />
+          <ShieldCheck className="w-4 h-4 text-slate-300 shrink-0" />
         </div>
       ) : (
-        <div className="p-3 bg-slate-950/50 border-b border-slate-800/80 flex justify-center">
-          <span
-            className={clsx(
-              "inline-block w-2.5 h-2.5 rounded-full",
-              role === "ADMIN" ? "bg-emerald-400" : role === "COMPTABLE" ? "bg-blue-400" : "bg-amber-400"
-            )}
-            title={`Connecté: ${user?.fullName || "Utilisateur"} (${role})`}
-          />
+        <div className="p-3 bg-slate-50/50 border-b border-slate-100 flex justify-center">
+          <span className={clsx("inline-block w-2 h-2 rounded-full", role === "ADMIN" ? "bg-emerald-400" : role === "COMPTABLE" ? "bg-blue-400" : "bg-slate-300")} title={`${user?.fullName} (${role})`} />
         </div>
       )}
 
-      <nav className="flex-1 p-2.5 space-y-1.5 overflow-y-auto">
+      <nav className="flex-1 p-2.5 space-y-0.5 overflow-y-auto">
         {filteredNav.map((item) => {
           const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
           return (
-            <Link
-              key={item.name}
-              href={item.href}
-              onClick={onCloseMobile}
-              title={collapsed ? item.name : undefined}
+            <Link key={item.name} href={item.href} onClick={onCloseMobile} title={collapsed ? item.name : undefined}
               className={clsx(
-                "flex items-center rounded-xl text-sm font-medium transition-all duration-150 group relative",
-                collapsed ? "justify-center p-3" : "justify-between px-3.5 py-2.5",
-                isActive
-                  ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
-                  : "text-slate-300 hover:bg-slate-800 hover:text-white"
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <item.icon
-                  className={clsx(
-                    "w-5 h-5 shrink-0 transition-transform group-hover:scale-110",
-                    isActive ? "text-white" : "text-slate-400"
-                  )}
-                />
+                "flex items-center rounded-xl text-[13px] font-medium transition-all duration-150 group",
+                collapsed ? "justify-center p-2.5" : "justify-between px-3 py-2.5",
+                isActive ? "bg-blue-50 text-blue-600" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+              )}>
+              <div className="flex items-center gap-2.5">
+                <item.icon className={clsx("w-4 h-4 shrink-0 transition-transform group-hover:scale-110", isActive ? "text-blue-500" : item.color)} />
                 {!collapsed && <span className="truncate">{item.name}</span>}
               </div>
-              {!collapsed && isActive && <ChevronRight className="w-4 h-4 opacity-70 shrink-0" />}
+              {!collapsed && isActive && <ChevronRight className="w-3.5 h-3.5 text-blue-300 shrink-0" />}
             </Link>
           );
         })}
       </nav>
 
-      <div className="p-3 border-t border-slate-800">
-        <button
-          onClick={() => logout()}
-          title={collapsed ? "Déconnexion" : undefined}
-          className={clsx(
-            "w-full flex items-center rounded-xl text-sm font-medium text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition-colors",
-            collapsed ? "justify-center p-3" : "gap-3 px-3.5 py-2.5"
-          )}
-        >
-          <LogOut className="w-5 h-5 shrink-0" />
+      <div className="p-2.5 border-t border-slate-100">
+        <button onClick={() => logout()} title={collapsed ? "Déconnexion" : undefined}
+          className={clsx("w-full flex items-center rounded-xl text-[13px] font-medium text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors", collapsed ? "justify-center p-2.5" : "gap-2.5 px-3 py-2")}>
+          <LogOut className="w-4 h-4 shrink-0" />
           {!collapsed && <span>Déconnexion</span>}
         </button>
       </div>

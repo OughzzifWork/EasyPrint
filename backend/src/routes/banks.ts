@@ -4,11 +4,25 @@ import { authMiddleware, adminOnly } from "../middleware/auth";
 
 const router = Router();
 
-router.get("/", authMiddleware, async (_req, res) => {
+function isAdmin(req: any): boolean {
+  return req.user!.role === "ADMIN";
+}
+
+router.get("/", authMiddleware, async (req, res) => {
   try {
+    const where: any = {};
+
+    if (!isAdmin(req)) {
+      where.bankEntities = {
+        some: { entityId: req.user!.entityId },
+      };
+    }
+
     const banks = await prisma.bank.findMany({
+      where,
       include: {
         _count: { select: { templates: true, cheques: true, effets: true } },
+        bankEntities: { include: { entity: true } },
       },
       orderBy: { code: "asc" },
     });
@@ -20,14 +34,16 @@ router.get("/", authMiddleware, async (_req, res) => {
 
 router.post("/", authMiddleware, adminOnly, async (req, res) => {
   try {
-    const { name, code, active } = req.body;
+    const { name, code, active, entityIds, logoUrl } = req.body;
 
     if (!name || !code) {
       return res.status(400).json({ error: "Le nom et le code de la banque sont obligatoires." });
     }
 
     const formattedCode = code.trim().toUpperCase();
-    const existingBank = await prisma.bank.findUnique({ where: { code: formattedCode } });
+    const existingBank = await prisma.bank.findFirst({
+      where: { code: formattedCode },
+    });
     if (existingBank) {
       return res.status(400).json({ error: "Une banque avec ce code existe déjà." });
     }
@@ -37,7 +53,12 @@ router.post("/", authMiddleware, adminOnly, async (req, res) => {
         name: name.trim(),
         code: formattedCode,
         active: active !== undefined ? active : true,
+        logoUrl: logoUrl || null,
+        bankEntities: {
+          create: (entityIds || []).map((entityId: string) => ({ entityId })),
+        },
       },
+      include: { bankEntities: { include: { entity: true } } },
     });
 
     await prisma.auditLog.create({
@@ -59,7 +80,7 @@ router.post("/", authMiddleware, adminOnly, async (req, res) => {
 router.put("/:id", authMiddleware, adminOnly, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, code, active } = req.body;
+    const { name, code, active, entityIds, logoUrl } = req.body;
 
     const existingBank = await prisma.bank.findUnique({ where: { id } });
     if (!existingBank) {
@@ -70,8 +91,24 @@ router.put("/:id", authMiddleware, adminOnly, async (req, res) => {
     if (name !== undefined) dataToUpdate.name = name.trim();
     if (code !== undefined) dataToUpdate.code = code.trim().toUpperCase();
     if (active !== undefined) dataToUpdate.active = active;
+    if (logoUrl !== undefined) dataToUpdate.logoUrl = logoUrl || null;
 
-    const updatedBank = await prisma.bank.update({ where: { id }, data: dataToUpdate });
+    const updatedBank = await prisma.$transaction(async (tx) => {
+      if (entityIds !== undefined) {
+        await tx.bankEntity.deleteMany({ where: { bankId: id } });
+        if (entityIds.length > 0) {
+          await tx.bankEntity.createMany({
+            data: entityIds.map((entityId: string) => ({ bankId: id, entityId })),
+          });
+        }
+      }
+
+      return tx.bank.update({
+        where: { id },
+        data: dataToUpdate,
+        include: { bankEntities: { include: { entity: true } } },
+      });
+    });
 
     await prisma.auditLog.create({
       data: {
@@ -110,6 +147,7 @@ router.delete("/:id", authMiddleware, adminOnly, async (req, res) => {
           await tx.templateField.deleteMany({ where: { templateId: { in: templateIds } } });
           await tx.template.deleteMany({ where: { bankId: id } });
         }
+        await tx.bankEntity.deleteMany({ where: { bankId: id } });
         await tx.bank.delete({ where: { id } });
       });
 

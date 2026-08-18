@@ -6,13 +6,21 @@ import { generateCalibratedPDF, FieldToPrint } from "../lib/pdfGenerator";
 
 const router = Router();
 
+function isAdmin(req: any): boolean {
+  return req.user!.role === "ADMIN";
+}
+
+function entityWhere(req: any): Record<string, string> {
+  return isAdmin(req) ? {} : { entityId: req.user!.entityId };
+}
+
 router.get("/", authMiddleware, async (req, res) => {
   const bankId = req.query.bankId as string;
   const status = req.query.status as string;
   const search = req.query.search as string;
   const includeDeleted = req.query.includeDeleted === "true";
 
-  const where: any = {};
+  const where: any = { ...entityWhere(req) };
   if (!includeDeleted) where.deletedAt = null;
   if (bankId) where.bankId = bankId;
   if (status) where.status = status;
@@ -26,10 +34,16 @@ router.get("/", authMiddleware, async (req, res) => {
   try {
     const cheques = await prisma.cheque.findMany({
       where,
-      include: { bank: true, template: true },
+      include: { bank: true, template: true, entity: { select: { name: true, code: true } } },
       orderBy: { createdAt: "desc" },
     });
-    return res.json(cheques);
+
+    const userIds = [...new Set(cheques.map((c) => c.createdBy).filter(Boolean))];
+    const users = userIds.length > 0 ? await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, fullName: true, username: true } }) : [];
+    const userMap = new Map(users.map((u) => [u.id, u.fullName || u.username]));
+
+    const result = cheques.map((c) => ({ ...c, createdByName: userMap.get(c.createdBy) || c.createdBy }));
+    return res.json(result);
   } catch {
     return res.status(500).json({ error: "Erreur lors de la récupération des chèques." });
   }
@@ -42,6 +56,11 @@ router.get("/:id", authMiddleware, async (req, res) => {
       include: { bank: true, template: { include: { fields: true } } },
     });
     if (!cheque) return res.status(404).json({ error: "Chèque non trouvé." });
+
+    if (!isAdmin(req) && cheque.entityId !== req.user!.entityId) {
+      return res.status(403).json({ error: "Accès refusé." });
+    }
+
     return res.json(cheque);
   } catch {
     return res.status(500).json({ error: "Erreur lors du chargement du chèque." });
@@ -58,8 +77,12 @@ router.post("/", authMiddleware, canEditOnly, async (req, res) => {
 
     let selectedTemplateId = templateId;
     if (!selectedTemplateId) {
+      const templateWhere: any = { bankId, documentType: "CHEQUE", isActive: true };
+      if (!isAdmin(req) && req.user!.entityId) {
+        templateWhere.templateEntities = { some: { entityId: req.user!.entityId } };
+      }
       const activeTemplate = await prisma.template.findFirst({
-        where: { bankId, documentType: "CHEQUE", isActive: true },
+        where: templateWhere,
       });
       if (!activeTemplate) {
         return res.status(400).json({
@@ -72,13 +95,19 @@ router.post("/", authMiddleware, canEditOnly, async (req, res) => {
     const numAmount = parseFloat(amountNumeric);
     const finalAmountWords = amountWords || convertAmountToWordsFr(numAmount);
     const trimmedBeneficiary = beneficiary.trim();
+    const entityId = req.user!.entityId;
 
     if (trimmedBeneficiary) {
-      await prisma.beneficiary.upsert({
-        where: { name: trimmedBeneficiary },
-        update: { active: true },
-        create: { name: trimmedBeneficiary, category: "FOURNISSEUR" },
-      }).catch(() => {});
+      const existingB = await prisma.beneficiary.findFirst({
+        where: { name: trimmedBeneficiary, ...(entityId ? { entityId } : {}) },
+      });
+      if (existingB) {
+        await prisma.beneficiary.update({ where: { id: existingB.id }, data: { active: true } }).catch(() => {});
+      } else {
+        await prisma.beneficiary.create({
+          data: { name: trimmedBeneficiary, category: "FOURNISSEUR", entityId },
+        }).catch(() => {});
+      }
     }
 
     const newCheque = await prisma.cheque.create({
@@ -92,6 +121,7 @@ router.post("/", authMiddleware, canEditOnly, async (req, res) => {
         creationPlace: creationPlace || "Casablanca",
         status: "DRAFT",
         createdBy: req.user!.fullName || req.user!.username,
+        entityId,
       },
       include: { bank: true, template: true },
     });
@@ -119,6 +149,10 @@ router.put("/:id", authMiddleware, canEditOnly, async (req, res) => {
 
     const existingCheque = await prisma.cheque.findUnique({ where: { id } });
     if (!existingCheque) return res.status(404).json({ error: "Chèque non trouvé." });
+
+    if (!isAdmin(req) && existingCheque.entityId !== req.user!.entityId) {
+      return res.status(403).json({ error: "Accès refusé." });
+    }
 
     const numAmount = amountNumeric !== undefined ? parseFloat(amountNumeric) : existingCheque.amountNumeric;
     const finalAmountWords = amountWords || convertAmountToWordsFr(numAmount);
@@ -159,17 +193,21 @@ router.delete("/:id", authMiddleware, canEditOnly, async (req, res) => {
   try {
     const { id } = req.params;
     const isHardDelete = req.query.hard === "true";
-    const isAdmin = req.user!.role === "ADMIN";
+    const admin = isAdmin(req);
 
     const existingCheque = await prisma.cheque.findUnique({ where: { id } });
     if (!existingCheque) return res.status(404).json({ error: "Chèque non trouvé." });
+
+    if (!admin && existingCheque.entityId !== req.user!.entityId) {
+      return res.status(403).json({ error: "Accès refusé." });
+    }
 
     if (existingCheque.status === "PRINTED") {
       return res.status(400).json({ error: "Impossible de supprimer un chèque déjà imprimé." });
     }
 
     if (isHardDelete) {
-      if (!isAdmin) {
+      if (!admin) {
         return res.status(403).json({ error: "Seul un administrateur peut supprimer définitivement un chèque." });
       }
 
@@ -219,6 +257,10 @@ router.post("/:id/restore", authMiddleware, canEditOnly, async (req, res) => {
       return res.status(404).json({ error: "Chèque non trouvé." });
     }
 
+    if (!isAdmin(req) && existingCheque.entityId !== req.user!.entityId) {
+      return res.status(403).json({ error: "Accès refusé." });
+    }
+
     const restoredCheque = await prisma.cheque.update({
       where: { id },
       data: { deletedAt: null },
@@ -251,6 +293,10 @@ router.get("/:id/print", authMiddleware, async (req, res) => {
     });
 
     if (!cheque) return res.status(404).json({ error: "Chèque non trouvé." });
+
+    if (!isAdmin(req) && cheque.entityId !== req.user!.entityId) {
+      return res.status(403).json({ error: "Accès refusé." });
+    }
 
     let template = cheque.template;
     if (!template) {
@@ -292,7 +338,7 @@ router.get("/:id/print", authMiddleware, async (req, res) => {
       drawGridOrBoxes: false,
     });
 
-    await prisma.cheque.update({ where: { id }, data: { status: "PRINTED" } });
+    await prisma.cheque.update({ where: { id }, data: { status: "PRINTED", printedAt: new Date() } });
 
     await prisma.auditLog.create({
       data: {

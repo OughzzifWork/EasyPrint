@@ -4,9 +4,19 @@ import { authMiddleware } from "../middleware/auth";
 
 const router = Router();
 
-router.get("/", authMiddleware, async (_req, res) => {
+function isAdmin(req: any): boolean {
+  return req.user!.role === "ADMIN";
+}
+
+function entityWhere(req: any): Record<string, string> {
+  return isAdmin(req) ? {} : { entityId: req.user!.entityId };
+}
+
+router.get("/", authMiddleware, async (req, res) => {
   try {
     const beneficiaries = await prisma.beneficiary.findMany({
+      where: entityWhere(req),
+      include: { entity: { select: { name: true, code: true } } },
       orderBy: { name: "asc" },
     });
     return res.json(beneficiaries);
@@ -24,21 +34,33 @@ router.post("/", authMiddleware, async (req, res) => {
     }
 
     const trimmedName = name.trim();
+    const entityId = req.user!.entityId;
 
-    const beneficiary = await prisma.beneficiary.upsert({
-      where: { name: trimmedName },
-      update: {
-        code: code ? code.trim() : undefined,
-        category: category || "FOURNISSEUR",
-        active: true,
-      },
-      create: {
-        name: trimmedName,
-        code: code ? code.trim() : null,
-        category: category || "FOURNISSEUR",
-        active: true,
-      },
+    const existing = await prisma.beneficiary.findFirst({
+      where: { name: trimmedName, ...(entityId ? { entityId } : {}) },
     });
+
+    let beneficiary;
+    if (existing) {
+      beneficiary = await prisma.beneficiary.update({
+        where: { id: existing.id },
+        data: {
+          code: code ? code.trim() : existing.code,
+          category: category || "FOURNISSEUR",
+          active: true,
+        },
+      });
+    } else {
+      beneficiary = await prisma.beneficiary.create({
+        data: {
+          name: trimmedName,
+          code: code ? code.trim() : null,
+          category: category || "FOURNISSEUR",
+          active: true,
+          entityId,
+        },
+      });
+    }
 
     return res.json(beneficiary);
   } catch {
@@ -51,6 +73,15 @@ router.delete("/", authMiddleware, async (req, res) => {
     const id = req.query.id as string;
     if (!id) {
       return res.status(400).json({ error: "ID manquant" });
+    }
+
+    const beneficiary = await prisma.beneficiary.findUnique({ where: { id } });
+    if (!beneficiary) {
+      return res.status(404).json({ error: "Bénéficiaire non trouvé." });
+    }
+
+    if (!isAdmin(req) && beneficiary.entityId !== req.user!.entityId) {
+      return res.status(403).json({ error: "Accès refusé." });
     }
 
     await prisma.beneficiary.delete({ where: { id } });

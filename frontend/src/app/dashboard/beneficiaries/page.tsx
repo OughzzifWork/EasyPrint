@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Header } from "@/components/layout/Header";
+import { useAuth } from "@/lib/auth-context";
 import { fetchApi } from "@/lib/api";
 import {
   Users,
@@ -14,6 +15,7 @@ import {
   RefreshCw,
   Tag,
   UserCheck,
+  Building2,
 } from "lucide-react";
 
 interface Beneficiary {
@@ -22,13 +24,19 @@ interface Beneficiary {
   code?: string | null;
   category?: string | null;
   active: boolean;
+  entityId?: string | null;
+  entity?: { name: string; code: string } | null;
   createdAt: string;
 }
 
 export default function BeneficiariesPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
+  const [entities, setEntities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [selectedEntityId, setSelectedEntityId] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
@@ -50,6 +58,15 @@ export default function BeneficiariesPage() {
 
   useEffect(() => {
     fetchBeneficiaries();
+    const fetchEntities = async () => {
+      try {
+        const data = await fetchApi("/api/entities");
+        setEntities(Array.isArray(data) ? data.filter((e: any) => e.active) : []);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchEntities();
   }, []);
 
   const handleAddSubmit = async (e: React.FormEvent) => {
@@ -90,20 +107,24 @@ export default function BeneficiariesPage() {
     }
   };
 
-  const filtered = beneficiaries.filter((b) =>
-    b.name.toLowerCase().includes(search.toLowerCase()) ||
-    (b.code && b.code.toLowerCase().includes(search.toLowerCase())) ||
-    (b.category && b.category.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filtered = beneficiaries.filter((b) => {
+    const matchesSearch =
+      b.name.toLowerCase().includes(search.toLowerCase()) ||
+      (b.code && b.code.toLowerCase().includes(search.toLowerCase())) ||
+      (b.category && b.category.toLowerCase().includes(search.toLowerCase()));
+    if (!matchesSearch) return false;
+    if (selectedEntityId && b.entityId !== selectedEntityId) return false;
+    return true;
+  });
 
   return (
     <div className="space-y-6">
       <Header title="Répertoire des Bénéficiaires" />
 
       {/* Top Banner */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-[#A16207]/10 text-[#A16207] flex items-center justify-center font-bold shrink-0">
             <UserCheck className="w-6 h-6" />
           </div>
           <div>
@@ -116,7 +137,7 @@ export default function BeneficiariesPage() {
 
         <button
           onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-500/20 transition-all"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#A16207] hover:bg-[#925506] text-white font-bold text-xs rounded-xl shadow-sm transition-all"
         >
           <Plus className="w-4 h-4" />
           <span>Ajouter un Bénéficiaire</span>
@@ -131,16 +152,33 @@ export default function BeneficiariesPage() {
       )}
 
       {/* Search & Stats bar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="relative w-full md:w-96">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-          <input
-            type="text"
-            placeholder="Rechercher par nom, code ou catégorie..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
+      <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <div className="relative w-full md:w-72">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+            <input
+              type="text"
+              placeholder="Rechercher par nom, code ou catégorie..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#A16207]/30"
+            />
+          </div>
+
+          {isAdmin && entities.length > 0 && (
+            <select
+              value={selectedEntityId}
+              onChange={(e) => setSelectedEntityId(e.target.value)}
+              className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#A16207]/30 font-medium"
+            >
+              <option value="">Toutes les entités</option>
+              {entities.map((ent: any) => (
+                <option key={ent.id} value={ent.id}>
+                  {ent.name} ({ent.code})
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 w-full md:w-auto justify-end">
@@ -156,7 +194,7 @@ export default function BeneficiariesPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -164,19 +202,20 @@ export default function BeneficiariesPage() {
                 <th className="py-3.5 px-5">Raison Sociale / Nom du Bénéficiaire</th>
                 <th className="py-3.5 px-5">Code Interne / Réf</th>
                 <th className="py-3.5 px-5">Catégorie</th>
+                {isAdmin && <th className="py-3.5 px-5">Entité</th>}
                 <th className="py-3.5 px-5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="py-12 text-center text-slate-400">
+                  <td colSpan={isAdmin ? 5 : 4} className="py-12 text-center text-slate-400">
                     Chargement du répertoire...
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-12 text-center text-slate-400">
+                  <td colSpan={isAdmin ? 5 : 4} className="py-12 text-center text-slate-400">
                     Aucun bénéficiaire trouvé dans le système.
                   </td>
                 </tr>
@@ -193,11 +232,19 @@ export default function BeneficiariesPage() {
                       {b.code || "—"}
                     </td>
                     <td className="py-3.5 px-5">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold border border-indigo-100">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#A16207]/10 text-[#A16207] text-xs font-semibold border border-[#A16207]/10">
                         <Tag className="w-3 h-3" />
                         {b.category || "FOURNISSEUR"}
                       </span>
                     </td>
+                    {isAdmin && (
+                      <td className="py-3.5 px-5">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-600 text-xs font-semibold border border-blue-100">
+                          <Building2 className="w-3 h-3" />
+                          {b.entity?.name || "—"}
+                        </span>
+                      </td>
+                    )}
                     <td className="py-3.5 px-5 text-right">
                       <button
                         onClick={() => handleDelete(b.id as string, b.name)}
@@ -217,8 +264,8 @@ export default function BeneficiariesPage() {
 
       {/* Modal Add Beneficiary */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md p-6 space-y-5 animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-md p-6 space-y-5 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="font-bold text-slate-900 text-base">Ajouter un nouveau Bénéficiaire</h3>
               <button
@@ -247,7 +294,7 @@ export default function BeneficiariesPage() {
                   placeholder="ex: SOMACA SARL, OCP S.A..."
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#A16207]/30"
                 />
               </div>
 
@@ -261,7 +308,7 @@ export default function BeneficiariesPage() {
                     placeholder="ex: FOU-001"
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#A16207]/30"
                   />
                 </div>
 
@@ -272,7 +319,7 @@ export default function BeneficiariesPage() {
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#A16207]/30"
                   >
                     <option value="FOURNISSEUR">Fournisseur</option>
                     <option value="CLIENT">Client</option>
@@ -292,7 +339,7 @@ export default function BeneficiariesPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md transition-all"
+                  className="px-5 py-2 bg-[#A16207] hover:bg-[#925506] text-white font-bold text-xs rounded-xl shadow-md transition-all"
                 >
                   Enregistrer
                 </button>
