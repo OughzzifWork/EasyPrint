@@ -16,6 +16,7 @@ import chequesRoutes from "./routes/cheques";
 import effetsRoutes from "./routes/effets";
 import auditRoutes from "./routes/audit";
 import entitiesRoutes from "./routes/entities";
+import adminRoutes from "./routes/admin";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -75,6 +76,7 @@ app.use("/api/templates", templatesRoutes);
 app.use("/api/cheques", chequesRoutes);
 app.use("/api/effets", effetsRoutes);
 app.use("/api/audit", auditRoutes);
+app.use("/api/admin", adminRoutes);
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });

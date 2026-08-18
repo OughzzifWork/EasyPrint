@@ -51,3 +51,15 @@ next-env.d.ts
 
 # temp files
 New Document texte.txt
+
+# logs
+*.log
+
+# generated agent files
+frontend/AGENTS.md
+frontend/CLAUDE.md
+
+# root assets (not tracked)
+favicon.png
+logo.jpeg
+opencode.json

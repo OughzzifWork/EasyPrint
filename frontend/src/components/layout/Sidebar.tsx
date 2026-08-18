@@ -28,7 +28,7 @@ export function Sidebar({ collapsed = false, onToggle, onCloseMobile }: SidebarP
     { name: "Banques", href: "/dashboard/banks", icon: Building2, roles: ["ADMIN", "COMPTABLE", "VISITEUR"], color: "text-violet-500" },
     { name: "Bénéficiaires", href: "/dashboard/beneficiaries", icon: UserCheck, roles: ["ADMIN", "COMPTABLE", "VISITEUR"], color: "text-pink-500" },
     { name: "Modèles d'impression", href: "/dashboard/templates", icon: LayoutTemplate, roles: ["ADMIN", "COMPTABLE", "VISITEUR"], color: "text-blue-500" },
-    { name: "Paramètres d'imprimante", href: "/dashboard/printer-settings", icon: Printer, roles: ["ADMIN"], color: "text-emerald-500" },
+    { name: "Paramètres", href: "/dashboard/printer-settings", icon: Printer, roles: ["ADMIN"], color: "text-emerald-500" },
     { name: "Utilisateurs", href: "/dashboard/users", icon: Users, roles: ["ADMIN"], color: "text-violet-500" },
     { name: "Entités", href: "/dashboard/entities", icon: Landmark, roles: ["ADMIN"], color: "text-emerald-500" },
     { name: "Journal d'audit", href: "/dashboard/audit", icon: History, roles: ["ADMIN"], color: "text-orange-500" },

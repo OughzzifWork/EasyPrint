@@ -63,6 +63,10 @@ export default function PrinterSettingsPage() {
 
   const [savedSuccess, setSavedSuccess] = useState(false);
 
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
+  const [resetSuccess, setResetSuccess] = useState(false);
+
   // Load from localStorage on mount
   useEffect(() => {
     try {
@@ -195,7 +199,7 @@ export default function PrinterSettingsPage() {
   if (role !== "ADMIN") {
     return (
       <div className="space-y-6">
-        <Header title="Paramètres d'imprimante" />
+          <Header title="Paramètres" />
         <div className="p-8 max-w-lg mx-auto bg-white rounded-xl border border-slate-200/80 shadow-sm text-center space-y-4 my-12">
           <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mx-auto">
             <ShieldAlert className="w-8 h-8" />
@@ -542,6 +546,59 @@ export default function PrinterSettingsPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Section 5: Zone Danger - Réinitialisation */}
+      <div className="bg-white rounded-xl border border-red-200 p-6 shadow-sm space-y-5">
+        <div className="flex items-center gap-2 pb-3 border-b border-red-100">
+          <ShieldAlert className="w-5 h-5 text-red-600" />
+          <h3 className="font-bold text-red-800">Zone Danger — Réinitialisation</h3>
+        </div>
+
+        <div className="p-4 bg-red-50 rounded-xl border border-red-100 text-sm text-red-800 leading-relaxed">
+          <strong>Attention :</strong> Cette action est <strong>irréversible</strong>. Elle supprimera toutes les données de la base (chèques, effets, banques, bénéficiaires, modèles, entités, utilisateurs non-admin, journaux d'audit). Seuls les comptes <strong>Administrateur Système</strong> seront conservés.
+        </div>
+
+        {resetMessage && (
+          <div className={`p-3 rounded-xl text-sm font-medium ${
+            resetSuccess ? "bg-emerald-50 text-emerald-800 border border-emerald-200" : "bg-red-50 text-red-800 border border-red-200"
+          }`}>
+            {resetSuccess ? "✓ " : "✕ "}{resetMessage}
+          </div>
+        )}
+
+        <button
+          disabled={resetLoading}
+          onClick={async () => {
+            if (!window.confirm("Êtes-vous sûr de vouloir réinitialiser la base de données ? Cette action est irréversible.")) return;
+            setResetLoading(true);
+            setResetMessage(null);
+            setResetSuccess(false);
+            try {
+              const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/admin/reset-db`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("ep_token")}` },
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error || "Erreur lors de la réinitialisation.");
+              setResetMessage(data.message);
+              setResetSuccess(true);
+            } catch (err: any) {
+              setResetMessage(err.message || "Erreur réseau.");
+              setResetSuccess(false);
+            } finally {
+              setResetLoading(false);
+            }
+          }}
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-sm rounded-xl shadow transition-all disabled:opacity-50"
+        >
+          {resetLoading ? (
+            <RefreshCw className="w-4 h-4 animate-spin" />
+          ) : (
+            <ShieldAlert className="w-4 h-4" />
+          )}
+          <span>Réinitialiser la base de données</span>
+        </button>
       </div>
 
       {/* Save bar bottom */}
