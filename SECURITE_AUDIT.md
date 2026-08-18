@@ -11,7 +11,7 @@
 
 L'application EasyPrint a bénéficié d'un audit de sécurité complet couvrant l'authentification, l'autorisation, la validation des entrées, la protection des secrets, les en-têtes HTTP, le rate limiting, le chiffrement des secrets SAP, la protection CSRF, et les dépendances. **Toutes les vulnérabilités identifiées ont été corrigées** (13/13). 49 tests fonctionnels ont été rédigés et passent tous (49/49).
 
-### Score Global
+**Score Global** : 12 corrigées, 1 risque accepté (D4 — uuid/exceljs, inexploitable)
 
 | Catégorie | Avant | Après |
 |---|---|---|
@@ -46,8 +46,9 @@ L'application EasyPrint a bénéficié d'un audit de sécurité complet couvrant
 | D1 | 🔵 DÉPENDANCE | xlsx — Prototype Pollution + ReDoS | `frontend/` | ✅ Remplacé par exceljs |
 | D2 | 🔵 DÉPENDANCE | postcss ≤8.5.22 — XSS via `</style>` | `frontend/node_modules/next` | ✅ Corrigé (Next.js 16.3.1) |
 | D3 | 🔵 DÉPENDANCE | sharp <0.35.0 — vulnérabilités libvips | `frontend/node_modules/next` | ✅ Corrigé (Next.js 16.3.1) |
+| D4 | 🔵 DÉPENDANCE | uuid <11.1.1 (via exceljs) — buffer bounds check | `frontend/node_modules/uuid` | ⚠️ Risque accepté (voir justification) |
 
-**Résultat** : 13/13 vulnérabilités corrigées. 0 haute criticité restante.
+**Résultat** : 12/13 vulnérabilités corrigées, 1 risque accepté (uuid/exceljs — inexploitable). 0 haute criticité restante.
 
 ---
 
@@ -275,13 +276,22 @@ if (!isAdmin(req)) {
 
 ### Backend — 0 vulnérabilités ✅
 
-### Frontend — 2 vulnérabilités modérées (restantes, sans risque opérationnel)
+### Frontend — 1 vulnérabilité modérée (risque accepté)
 
-| Package | Sévérité | Problème | Impact réel |
-|---------|----------|----------|-------------|
-| uuid <11.1.1 | Modérée | Missing buffer bounds check (v3/v5/v6) | Faible — usage interne d'exceljs, pas de buffer utilisateur contrôlé |
+| Package | Sévérité | Problème | Statut |
+|---------|----------|----------|--------|
+| uuid <11.1.1 (via exceljs@4.4.0) | Modérée | Missing buffer bounds check (GHSA-w5hq-g745-h8pq) | ⚠️ Risque accepté |
 
-**Note** : La seule dépendance restante (`uuid` via `exceljs`) concerne des fonctions de hachage UUID rarement utilisées avec des buffers externes. L'impact réel est négligeable. Le fix nécessiterait `exceljs@3.4.0` (breaking change, fonctionnalités réduites).
+**Justification du risque accepté** :
+
+La vulnérabilité concerne les fonctions `v3()`/`v5()`/`v6()` de `uuid` lorsqu'un buffer est fourni en paramètre `buf`. Or :
+
+1. **exceljs n'utilise uuid que pour générer des identifiants internes** (`uuid.v4()` uniquement) — les fonctions v3/v5/v6 ne sont jamais appelées.
+2. **Aucun buffer utilisateur n'est jamais transmis** à ces fonctions.
+3. **Aucune version stable d'exceljs** n'a mis à jour sa dépendance vers `uuid@≥11.1.1` — même la prerelease 4.4.1-p0 reste sur `^8.3.0`.
+4. **L'alternative** (`exceljs@3.4.0`) est un downgrade qui supprime des fonctionnalités et n'élimine pas la dépendance uuid.
+
+**Impact réel** : Négligeable — le chemin d'exploitation (vérification de bounds sur un buffer contrôlé via les fonctions v3/v5/v6) est inatteignable dans le contexte d'utilisation d'exceljs.
 
 ---
 
