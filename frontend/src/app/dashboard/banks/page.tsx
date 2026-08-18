@@ -84,9 +84,18 @@ export default function BanksPage() {
     if (!selectedBank) return;
     setError(null); setSuccess(null);
     try {
+      const payload: any = {};
+      if (code !== selectedBank.code) payload.code = code;
+      if (name !== selectedBank.name) payload.name = name;
+      if (active !== selectedBank.active) payload.active = active;
+      const origEntityIds = selectedBank.bankEntities?.map((be: any) => be.entityId).sort() || [];
+      const newEntityIds = [...selectedEntityIds].sort();
+      if (JSON.stringify(origEntityIds) !== JSON.stringify(newEntityIds)) payload.entityIds = selectedEntityIds;
+      if (logoUrl !== (selectedBank.logoUrl || null)) payload.logoUrl = logoUrl;
+      if (Object.keys(payload).length === 0) { setSuccess("Aucune modification."); setIsEditOpen(false); setSelectedBank(null); return; }
       await fetchApi(`/api/banks/${selectedBank.id}`, {
         method: "PUT",
-        body: JSON.stringify({ code, name, active, entityIds: selectedEntityIds, logoUrl }),
+        body: JSON.stringify(payload),
       });
       setSuccess(`Banque "${name}" mise à jour.`);
       setIsEditOpen(false); setSelectedBank(null); fetchBanks();
