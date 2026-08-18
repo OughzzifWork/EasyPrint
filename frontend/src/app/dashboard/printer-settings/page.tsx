@@ -577,7 +577,7 @@ export default function PrinterSettingsPage() {
             try {
               const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/admin/reset-db`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("ep_token")}` },
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
               });
               const data = await res.json();
               if (!res.ok) throw new Error(data.error || "Erreur lors de la réinitialisation.");
