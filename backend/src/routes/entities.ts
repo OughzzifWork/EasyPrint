@@ -1,6 +1,9 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
 import { authMiddleware, adminOnly } from "../middleware/auth";
+import { encrypt, decrypt, maskPassword } from "../lib/crypto";
+import { validate } from "../schemas/validate";
+import { createEntitySchema, updateEntitySchema } from "../schemas/entities";
 
 const router = Router();
 
@@ -13,7 +16,7 @@ router.get("/", adminOnly, async (_req, res) => {
       orderBy: { name: "asc" },
       include: { _count: { select: { users: true, bankEntities: true, cheques: true, effets: true } } },
     });
-    return res.json(entities);
+    return res.json(entities.map(e => ({ ...e, sapPassword: e.sapPassword ? maskPassword() : null })));
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
   }
@@ -27,32 +30,36 @@ router.get("/:id", adminOnly, async (req, res) => {
       include: { _count: { select: { users: true, bankEntities: true, cheques: true, effets: true, beneficiaries: true } } },
     });
     if (!entity) return res.status(404).json({ error: "Entité non trouvée." });
-    return res.json(entity);
+    return res.json({ ...entity, sapPassword: entity.sapPassword ? maskPassword() : null });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
   }
 });
 
 // Create entity
-router.post("/", adminOnly, async (req, res) => {
+router.post("/", adminOnly, validate(createEntitySchema), async (req, res) => {
   try {
     const { name, code, dataMode, sapServerUrl, sapCompanyDB, sapUser, sapPassword, sapQuery } = req.body;
-    if (!name || !code) return res.status(400).json({ error: "Le nom et le code sont obligatoires." });
 
     const existing = await prisma.entity.findUnique({ where: { code } });
     if (existing) return res.status(400).json({ error: "Ce code entité existe déjà." });
 
     const entity = await prisma.entity.create({
-      data: { name, code: code.toUpperCase(), dataMode: dataMode || "NORMAL", sapServerUrl, sapCompanyDB, sapUser, sapPassword, sapQuery },
+      data: {
+        name, code: code.toUpperCase(), dataMode: dataMode || "NORMAL",
+        sapServerUrl, sapCompanyDB, sapUser,
+        sapPassword: sapPassword ? encrypt(sapPassword) : null,
+        sapQuery,
+      },
     });
-    return res.status(201).json(entity);
+    return res.status(201).json({ ...entity, sapPassword: entity.sapPassword ? maskPassword() : null });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
   }
 });
 
 // Update entity
-router.put("/:id", adminOnly, async (req, res) => {
+router.put("/:id", adminOnly, validate(updateEntitySchema), async (req, res) => {
   try {
     const { name, code, dataMode, sapServerUrl, sapCompanyDB, sapUser, sapPassword, sapQuery, active } = req.body;
     const entity = await prisma.entity.findUnique({ where: { id: req.params.id } });
@@ -72,12 +79,18 @@ router.put("/:id", adminOnly, async (req, res) => {
         ...(sapServerUrl !== undefined && { sapServerUrl }),
         ...(sapCompanyDB !== undefined && { sapCompanyDB }),
         ...(sapUser !== undefined && { sapUser }),
-        ...(sapPassword !== undefined && { sapPassword }),
+        ...(sapPassword !== undefined && {
+          sapPassword: sapPassword === "••••••••" || sapPassword === maskPassword()
+            ? entity.sapPassword
+            : sapPassword === ""
+              ? null
+              : encrypt(sapPassword),
+        }),
         ...(sapQuery !== undefined && { sapQuery }),
         ...(active !== undefined && { active }),
       },
     });
-    return res.json(updated);
+    return res.json({ ...updated, sapPassword: updated.sapPassword ? maskPassword() : null });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
   }
@@ -119,8 +132,8 @@ router.post("/:id/test-sap", adminOnly, async (req, res) => {
       return res.status(400).json({ error: "Configuration SAP incomplète." });
     }
 
-    // SAP HANA connection test would go here
-    // For now, return success placeholder
+    const sapPasswordPlain = decrypt(entity.sapPassword);
+    // SAP HANA connection test would go here, using sapPasswordPlain
     return res.json({ success: true, message: "Connexion SAP testée avec succès." });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
@@ -135,8 +148,8 @@ router.post("/:id/pull-sap", adminOnly, async (req, res) => {
     if (entity.dataMode !== "SAP") return res.status(400).json({ error: "Cette entité n'est pas en mode SAP." });
     if (!entity.sapQuery) return res.status(400).json({ error: "Aucune requête SQL configurée." });
 
-    // SAP data pull would go here
-    // For now, return placeholder
+    const sapPasswordPlain = entity.sapPassword ? decrypt(entity.sapPassword) : null;
+    // SAP data pull would go here, using sapPasswordPlain
     return res.json({ success: true, message: "Données SAP tirées avec succès.", count: 0 });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });

@@ -3,6 +3,8 @@ import { prisma } from "../lib/prisma";
 import { authMiddleware, canEditOnly } from "../middleware/auth";
 import { convertAmountToWordsFr } from "../lib/numberToWordsFr";
 import { generateCalibratedPDF, FieldToPrint } from "../lib/pdfGenerator";
+import { validate } from "../schemas/validate";
+import { createEffetSchema, updateEffetSchema } from "../schemas/effets";
 
 const router = Router();
 
@@ -68,13 +70,9 @@ router.get("/:id", authMiddleware, async (req, res) => {
   }
 });
 
-router.post("/", authMiddleware, canEditOnly, async (req, res) => {
+router.post("/", authMiddleware, canEditOnly, validate(createEffetSchema), async (req, res) => {
   try {
     const { bankId, templateId, sapCode, beneficiary, dueDate, amountNumeric, amountWords, creationDate, creationPlace, cause } = req.body;
-
-    if (!bankId || !beneficiary || !amountNumeric || !dueDate) {
-      return res.status(400).json({ error: "La banque, le bénéficiaire, la date d'échéance et le montant sont obligatoires." });
-    }
 
     let selectedTemplateId = templateId;
     if (!selectedTemplateId) {
@@ -146,7 +144,7 @@ router.post("/", authMiddleware, canEditOnly, async (req, res) => {
   }
 });
 
-router.put("/:id", authMiddleware, canEditOnly, async (req, res) => {
+router.put("/:id", authMiddleware, canEditOnly, validate(updateEffetSchema), async (req, res) => {
   try {
     const { id } = req.params;
     const { sapCode, beneficiary, dueDate, amountNumeric, amountWords, creationDate, creationPlace, cause, status, bankId, templateId } = req.body;

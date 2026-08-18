@@ -3,6 +3,8 @@ import { prisma } from "../lib/prisma";
 import { authMiddleware, canEditOnly } from "../middleware/auth";
 import { convertAmountToWordsFr } from "../lib/numberToWordsFr";
 import { generateCalibratedPDF, FieldToPrint } from "../lib/pdfGenerator";
+import { validate } from "../schemas/validate";
+import { createChequeSchema, updateChequeSchema } from "../schemas/cheques";
 
 const router = Router();
 
@@ -67,13 +69,9 @@ router.get("/:id", authMiddleware, async (req, res) => {
   }
 });
 
-router.post("/", authMiddleware, canEditOnly, async (req, res) => {
+router.post("/", authMiddleware, canEditOnly, validate(createChequeSchema), async (req, res) => {
   try {
     const { bankId, templateId, beneficiary, amountNumeric, amountWords, creationDate, creationPlace } = req.body;
-
-    if (!bankId || !beneficiary || !amountNumeric) {
-      return res.status(400).json({ error: "La banque, le bénéficiaire et le montant sont obligatoires." });
-    }
 
     let selectedTemplateId = templateId;
     if (!selectedTemplateId) {
@@ -142,7 +140,7 @@ router.post("/", authMiddleware, canEditOnly, async (req, res) => {
   }
 });
 
-router.put("/:id", authMiddleware, canEditOnly, async (req, res) => {
+router.put("/:id", authMiddleware, canEditOnly, validate(updateChequeSchema), async (req, res) => {
   try {
     const { id } = req.params;
     const { beneficiary, amountNumeric, amountWords, creationDate, creationPlace, status, bankId, templateId } = req.body;

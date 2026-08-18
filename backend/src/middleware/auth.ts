@@ -1,7 +1,12 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET || "impce-super-secret-jwt-key-2026-antigravity";
+const JWT_SECRET_RAW = process.env.JWT_SECRET;
+if (!JWT_SECRET_RAW) {
+  console.error("[FATAL] JWT_SECRET is not set in environment variables.");
+  process.exit(1);
+}
+const JWT_SECRET: string = JWT_SECRET_RAW;
 
 export interface AuthUser {
   id: string;

@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
 import { authMiddleware, adminOnly } from "../middleware/auth";
+import { validate } from "../schemas/validate";
+import { createBankSchema, updateBankSchema } from "../schemas/banks";
 
 const router = Router();
 
@@ -32,13 +34,9 @@ router.get("/", authMiddleware, async (req, res) => {
   }
 });
 
-router.post("/", authMiddleware, adminOnly, async (req, res) => {
+router.post("/", authMiddleware, adminOnly, validate(createBankSchema), async (req, res) => {
   try {
     const { name, code, active, entityIds, logoUrl } = req.body;
-
-    if (!name || !code) {
-      return res.status(400).json({ error: "Le nom et le code de la banque sont obligatoires." });
-    }
 
     const formattedCode = code.trim().toUpperCase();
     const existingBank = await prisma.bank.findFirst({
@@ -77,7 +75,7 @@ router.post("/", authMiddleware, adminOnly, async (req, res) => {
   }
 });
 
-router.put("/:id", authMiddleware, adminOnly, async (req, res) => {
+router.put("/:id", authMiddleware, adminOnly, validate(updateBankSchema), async (req, res) => {
   try {
     const { id } = req.params;
     const { name, code, active, entityIds, logoUrl } = req.body;

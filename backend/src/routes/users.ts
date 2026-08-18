@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
 import { authMiddleware, adminOnly } from "../middleware/auth";
+import { validate } from "../schemas/validate";
+import { createUserSchema, updateUserSchema } from "../schemas/users";
 
 const router = Router();
 
@@ -29,13 +31,9 @@ router.get("/", authMiddleware, async (req, res) => {
   }
 });
 
-router.post("/", authMiddleware, adminOnly, async (req, res) => {
+router.post("/", authMiddleware, adminOnly, validate(createUserSchema), async (req, res) => {
   try {
     const { fullName, username, password, role, active, canEdit, entityId } = req.body;
-
-    if (!fullName || !username || !password) {
-      return res.status(400).json({ error: "Tous les champs obligatoires doivent être renseignés." });
-    }
 
     const bcrypt = require("bcryptjs");
     const existingUser = await prisma.user.findUnique({ where: { username } });
@@ -76,7 +74,7 @@ router.post("/", authMiddleware, adminOnly, async (req, res) => {
   }
 });
 
-router.put("/:id", authMiddleware, adminOnly, async (req, res) => {
+router.put("/:id", authMiddleware, adminOnly, validate(updateUserSchema), async (req, res) => {
   try {
     const { id } = req.params;
     const { fullName, username, role, active, canEdit, newPassword, entityId } = req.body;

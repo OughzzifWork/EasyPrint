@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Header } from "@/components/layout/Header";
 import { useAuth } from "@/lib/auth-context";
 import { fetchApi, fetchApiRaw } from "@/lib/api";
-import * as XLSX from "xlsx";
+import * as ExcelJS from "exceljs";
 import { convertAmountToWordsFr } from "@/lib/numberToWordsFr";
 import {
   FileSpreadsheet,
@@ -265,28 +265,51 @@ export default function EffetsPage() {
     }
   };
 
-  const handleExportExcel = () => {
-    const exportData = effets.map((e) => ({
-      ID: e.id,
-      Code_SAP: e.sapCode,
-      Banque: e.bank?.name || "",
-      Code_Banque: e.bank?.code || "",
-      Bénéficiaire: e.beneficiary,
-      Date_Echéance: e.dueDate ? new Date(e.dueDate).toLocaleDateString("fr-FR") : "",
-      Montant_Chiffres: e.amountNumeric,
-      Montant_Lettres: e.amountWords,
-      Motif_Cause: e.cause,
-      Lieu_Création: e.creationPlace,
-      Date_Création: e.creationDate ? new Date(e.creationDate).toLocaleDateString("fr-FR") : "",
-      Statut: e.status,
-      Créé_Par: e.createdBy,
-      Supprimé: e.deletedAt ? "Oui" : "Non",
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Effets_LCN");
-    XLSX.writeFile(workbook, `Effets_EasyPrint_${new Date().toISOString().split("T")[0]}.xlsx`);
+  const handleExportExcel = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Effets_LCN");
+    worksheet.columns = [
+      { header: "ID", key: "ID", width: 36 },
+      { header: "Code_SAP", key: "Code_SAP", width: 18 },
+      { header: "Banque", key: "Banque", width: 25 },
+      { header: "Code_Banque", key: "Code_Banque", width: 15 },
+      { header: "Bénéficiaire", key: "Bénéficiaire", width: 30 },
+      { header: "Date_Echéance", key: "Date_Echéance", width: 15 },
+      { header: "Montant_Chiffres", key: "Montant_Chiffres", width: 18 },
+      { header: "Montant_Lettres", key: "Montant_Lettres", width: 40 },
+      { header: "Motif_Cause", key: "Motif_Cause", width: 30 },
+      { header: "Lieu_Création", key: "Lieu_Création", width: 20 },
+      { header: "Date_Création", key: "Date_Création", width: 15 },
+      { header: "Statut", key: "Statut", width: 12 },
+      { header: "Créé_Par", key: "Créé_Par", width: 20 },
+      { header: "Supprimé", key: "Supprimé", width: 12 },
+    ];
+    effets.forEach((e) => {
+      worksheet.addRow({
+        ID: e.id,
+        Code_SAP: e.sapCode,
+        Banque: e.bank?.name || "",
+        Code_Banque: e.bank?.code || "",
+        Bénéficiaire: e.beneficiary,
+        Date_Echéance: e.dueDate ? new Date(e.dueDate).toLocaleDateString("fr-FR") : "",
+        Montant_Chiffres: e.amountNumeric,
+        Montant_Lettres: e.amountWords,
+        Motif_Cause: e.cause,
+        Lieu_Création: e.creationPlace,
+        Date_Création: e.creationDate ? new Date(e.creationDate).toLocaleDateString("fr-FR") : "",
+        Statut: e.status,
+        Créé_Par: e.createdBy,
+        Supprimé: e.deletedAt ? "Oui" : "Non",
+      });
+    });
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Effets_EasyPrint_${new Date().toISOString().split("T")[0]}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleBatchImportSubmit = async (e: React.FormEvent) => {
@@ -298,10 +321,22 @@ export default function EffetsPage() {
 
     try {
       const dataBuffer = await importFile.arrayBuffer();
-      const workbook = XLSX.read(dataBuffer, { type: "array" });
-      const firstSheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[firstSheetName];
-      const rows: any[] = XLSX.utils.sheet_to_json(sheet);
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(dataBuffer);
+      const sheet = workbook.worksheets[0];
+      if (!sheet || sheet.rowCount <= 1) throw new Error("Le fichier Excel est vide.");
+
+      const headerRow = sheet.getRow(1);
+      const headers: string[] = [];
+      headerRow.eachCell((cell, colNumber) => { headers[colNumber] = String(cell.value || ""); });
+
+      const rows: any[] = [];
+      sheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return;
+        const obj: any = {};
+        row.eachCell((cell, colNumber) => { obj[headers[colNumber]] = cell.value; });
+        rows.push(obj);
+      });
 
       if (rows.length === 0) throw new Error("Le fichier Excel est vide.");
 

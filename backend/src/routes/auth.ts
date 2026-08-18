@@ -2,17 +2,20 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma";
+import { validate } from "../schemas/validate";
+import { loginSchema } from "../schemas/auth";
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || "impce-super-secret-jwt-key-2026-antigravity";
+const JWT_SECRET_RAW = process.env.JWT_SECRET;
+if (!JWT_SECRET_RAW) {
+  console.error("[FATAL] JWT_SECRET is not set in environment variables.");
+  process.exit(1);
+}
+const JWT_SECRET: string = JWT_SECRET_RAW;
 
-router.post("/login", async (req, res) => {
+router.post("/login", validate(loginSchema), async (req, res) => {
   try {
     const { username, password } = req.body;
-
-    if (!username || !password) {
-      return res.status(400).json({ error: "Veuillez saisir votre nom d'utilisateur et votre mot de passe." });
-    }
 
     const user = await prisma.user.findUnique({
       where: { username },

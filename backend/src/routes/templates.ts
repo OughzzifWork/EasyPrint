@@ -2,6 +2,8 @@ import { Router } from "express";
 import { prisma } from "../lib/prisma";
 import { authMiddleware, canEditOnly } from "../middleware/auth";
 import { generateCalibratedPDF, FieldToPrint } from "../lib/pdfGenerator";
+import { validate } from "../schemas/validate";
+import { createTemplateSchema, updateTemplateSchema, previewTemplateSchema } from "../schemas/templates";
 
 const router = Router();
 
@@ -18,6 +20,9 @@ router.get("/", authMiddleware, async (req, res) => {
   if (documentType) where.documentType = documentType;
 
   if (!isAdmin(req)) {
+    if (!req.user!.entityId) {
+      return res.json([]);
+    }
     where.templateEntities = {
       some: { entityId: req.user!.entityId },
     };
@@ -59,16 +64,12 @@ router.get("/:id", authMiddleware, async (req, res) => {
   }
 });
 
-router.post("/", authMiddleware, canEditOnly, async (req, res) => {
+router.post("/", authMiddleware, canEditOnly, validate(createTemplateSchema), async (req, res) => {
   try {
     const {
       bankId, documentType, name, backgroundImageUrl,
       physicalWidthMm, physicalHeightMm, isActive, fields, entityIds,
     } = req.body;
-
-    if (!bankId || !documentType || !name) {
-      return res.status(400).json({ error: "La banque, le type de document et le nom du modèle sont obligatoires." });
-    }
 
     if (isActive) {
       await prisma.template.updateMany({
@@ -121,7 +122,7 @@ router.post("/", authMiddleware, canEditOnly, async (req, res) => {
   }
 });
 
-router.put("/:id", authMiddleware, canEditOnly, async (req, res) => {
+router.put("/:id", authMiddleware, canEditOnly, validate(updateTemplateSchema), async (req, res) => {
   try {
     const { id } = req.params;
     const { name, backgroundImageUrl, physicalWidthMm, physicalHeightMm, isActive, fields, entityIds } = req.body;
@@ -253,7 +254,7 @@ router.delete("/:id", authMiddleware, async (req, res) => {
   }
 });
 
-router.post("/preview", authMiddleware, async (req, res) => {
+router.post("/preview", authMiddleware, validate(previewTemplateSchema), async (req, res) => {
   try {
     const {
       physicalWidthMm, physicalHeightMm, backgroundImageUrl,

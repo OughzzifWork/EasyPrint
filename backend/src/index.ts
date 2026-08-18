@@ -1,6 +1,9 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+import { rateLimit } from "express-rate-limit";
 import dotenv from "dotenv";
+import { originCheck } from "./middleware/csrf";
 
 dotenv.config();
 
@@ -17,16 +20,51 @@ import entitiesRoutes from "./routes/entities";
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+app.use(helmet());
+
+const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:3000").split(",");
+
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    if (process.env.NODE_ENV !== "production") return callback(null, true);
-    const allowed = process.env.FRONTEND_URL || "http://localhost:3000";
-    callback(null, origin === allowed);
+    if (!origin) return callback(null, false);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(null, false);
   },
   credentials: true,
 }));
-app.use(express.json({ limit: "50mb" }));
+
+app.use(express.json({ limit: "2mb" }));
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: "Trop de tentatives de connexion. Réessayez dans 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 120,
+  message: { error: "Trop de requêtes. Réessayez dans 1 minute." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const printLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 30,
+  message: { error: "Trop d'impressions en cours. Réessayez dans 1 minute." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use("/api/auth/login", loginLimiter);
+app.use("/api/cheques", printLimiter);
+app.use("/api/effets", printLimiter);
+app.use("/api", apiLimiter);
+
+app.use("/api", originCheck);
 
 app.use("/api/entities", entitiesRoutes);
 app.use("/api/auth", authRoutes);

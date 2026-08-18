@@ -69,7 +69,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
-      document.cookie = `token=${data.token}; path=/; max-age=86400; SameSite=Lax`;
+      const isSecure = window.location.protocol === "https:";
+      document.cookie = `token=${data.token}; path=/; max-age=86400; SameSite=Strict${isSecure ? "; Secure" : ""}`;
       setToken(data.token);
       setUser(data.user);
       return {};

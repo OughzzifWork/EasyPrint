@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
 import { authMiddleware } from "../middleware/auth";
+import { validate } from "../schemas/validate";
+import { createBeneficiarySchema } from "../schemas/beneficiaries";
 
 const router = Router();
 
@@ -25,13 +27,9 @@ router.get("/", authMiddleware, async (req, res) => {
   }
 });
 
-router.post("/", authMiddleware, async (req, res) => {
+router.post("/", authMiddleware, validate(createBeneficiarySchema), async (req, res) => {
   try {
     const { name, code, category } = req.body;
-
-    if (!name || !name.trim()) {
-      return res.status(400).json({ error: "Le nom du bénéficiaire est obligatoire." });
-    }
 
     const trimmedName = name.trim();
     const entityId = req.user!.entityId;
