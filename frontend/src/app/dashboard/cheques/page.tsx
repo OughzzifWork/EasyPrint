@@ -57,9 +57,6 @@ export default function ChequesPage() {
   const [printLoading, setPrintLoading] = useState(false);
   const [printError, setPrintError] = useState<string | null>(null);
   const [printChequeId, setPrintChequeId] = useState<string | null>(null);
-  const [offsetX, setOffsetX] = useState(0);
-  const [offsetY, setOffsetY] = useState(0);
-  const [printError, setPrintError] = useState<string | null>(null);
 
   // Form state
   const [bankId, setBankId] = useState("");
@@ -245,8 +242,6 @@ export default function ChequesPage() {
     setPrintLoading(true);
     setIsPrintOpen(true);
     setPrintChequeId(id);
-    setOffsetX(0);
-    setOffsetY(0);
     try {
       const stored = localStorage.getItem("impce_printer_config");
       const cfg = stored ? JSON.parse(stored) : {};
@@ -258,6 +253,8 @@ export default function ChequesPage() {
         dateFormat: cfg.dateFormat || "DD/MM/YYYY",
         amountPrefix: cfg.amountPrefix ?? "#",
         amountSuffix: cfg.amountSuffix ?? "#",
+        offsetX: String(cfg.offsetX ?? 0),
+        offsetY: String(cfg.offsetY ?? 0),
       });
       const res = await fetchApiRaw(`/api/cheques/${id}/print?${params.toString()}`);
       if (!res.ok) {
@@ -291,9 +288,9 @@ export default function ChequesPage() {
         dateFormat: cfg.dateFormat || "DD/MM/YYYY",
         amountPrefix: cfg.amountPrefix ?? "#",
         amountSuffix: cfg.amountSuffix ?? "#",
+        offsetX: String(cfg.offsetX ?? 0),
+        offsetY: String(cfg.offsetY ?? 0),
       });
-      if (offsetX) params.set("offsetX", String(offsetX));
-      if (offsetY) params.set("offsetY", String(offsetY));
       const res = await fetchApiRaw(`/api/cheques/${printChequeId}/print?${params.toString()}`);
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -1193,22 +1190,6 @@ export default function ChequesPage() {
 
             {previewPdfUrl && !printLoading && !printError && (
               <>
-                {isAdmin && (
-                  <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center gap-4 flex-wrap">
-                    <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Décalage impression (mm)</span>
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs text-slate-500">Horizontal:</label>
-                      <input type="number" value={offsetX} onChange={(e) => setOffsetX(Number(e.target.value))} className="w-20 px-2 py-1 text-xs border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-blue-500/20" />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs text-slate-500">Vertical:</label>
-                      <input type="number" value={offsetY} onChange={(e) => setOffsetY(Number(e.target.value))} className="w-20 px-2 py-1 text-xs border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-blue-500/20" />
-                    </div>
-                    <button onClick={refreshPrintPreview} className="px-3 py-1 text-xs font-semibold text-white bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 rounded-lg transition-colors">
-                      Appliquer
-                    </button>
-                  </div>
-                )}
                 <iframe src={previewPdfUrl} className="w-full flex-1 border-none" title="PDF Print Preview" />
               </>
             )}

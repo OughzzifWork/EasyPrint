@@ -33,6 +33,8 @@ export default function PrinterSettingsPage() {
   const [dateFormat, setDateFormat] = useState("DD/MM/YYYY");
   const [amountPrefix, setAmountPrefix] = useState("#");
   const [amountSuffix, setAmountSuffix] = useState("#");
+  const [offsetX, setOffsetX] = useState(0);
+  const [offsetY, setOffsetY] = useState(0);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   const [resetLoading, setResetLoading] = useState(false);
@@ -55,12 +57,14 @@ export default function PrinterSettingsPage() {
         if (config.dateFormat) setDateFormat(config.dateFormat);
         if (config.amountPrefix !== undefined) setAmountPrefix(config.amountPrefix);
         if (config.amountSuffix !== undefined) setAmountSuffix(config.amountSuffix);
+        if (config.offsetX !== undefined) setOffsetX(config.offsetX);
+        if (config.offsetY !== undefined) setOffsetY(config.offsetY);
       }
     } catch (e) {}
   }, []);
 
   const handleSave = () => {
-    const config = { orientation, chequeWidth, chequeHeight, effetWidth, effetHeight, decimals, thousandSep, currency, dateFormat, amountPrefix, amountSuffix };
+    const config = { orientation, chequeWidth, chequeHeight, effetWidth, effetHeight, decimals, thousandSep, currency, dateFormat, amountPrefix, amountSuffix, offsetX, offsetY };
     localStorage.setItem("impce_printer_config", JSON.stringify(config));
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
@@ -78,6 +82,8 @@ export default function PrinterSettingsPage() {
     setDateFormat("DD/MM/YYYY");
     setAmountPrefix("#");
     setAmountSuffix("#");
+    setOffsetX(0);
+    setOffsetY(0);
     localStorage.removeItem("impce_printer_config");
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
@@ -148,8 +154,8 @@ export default function PrinterSettingsPage() {
             <SlidersHorizontal className="w-5 h-5 text-blue-600" />
             <h3 className="font-bold text-slate-800">Orientation de l'Impression</h3>
           </div>
-          <div className="flex-1 flex items-center">
-            <div className="grid grid-cols-2 gap-3 w-full mt-4">
+          <div className="flex-1 flex flex-col justify-between gap-4 mt-4">
+            <div className="grid grid-cols-2 gap-3">
               <button type="button" onClick={() => setOrientation("LANDSCAPE")} className={`py-3 px-4 rounded-xl border text-sm font-bold flex items-center justify-center gap-2 transition-all ${orientation === "LANDSCAPE" ? "bg-[#1E3A8A] text-white border-[#1E3A8A] shadow-sm" : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"}`}>
                 <SlidersHorizontal className="w-5 h-5" />
                 <span>Paysage</span>
@@ -158,6 +164,20 @@ export default function PrinterSettingsPage() {
                 <FileText className="w-5 h-5" />
                 <span>Portrait</span>
               </button>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase text-slate-600">Décalage Impression (mm)</label>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase text-slate-500 mb-0.5">Horizontal</label>
+                  <input type="number" value={offsetX} onChange={(e) => setOffsetX(parseFloat(e.target.value) || 0)} className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase text-slate-500 mb-0.5">Vertical</label>
+                  <input type="number" value={offsetY} onChange={(e) => setOffsetY(parseFloat(e.target.value) || 0)} className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30" />
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: easyprint
+      POSTGRES_PASSWORD: easyprint
+      POSTGRES_DB: easyprint
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U easyprint"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      DATABASE_URL: "postgresql://easyprint:easyprint@postgres:5432/easyprint?schema=public"
+      JWT_SECRET: "impce-super-secret-jwt-key-2026-antigravity"
+      PORT: 4000
+      FRONTEND_URL: "http://localhost:3000"
+      CORS_ORIGINS: "http://localhost:3000,http://172.16.1.172:3000"
+    volumes:
+      - ./frontend/public/templates:/app/frontend/public/templates
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: "http://localhost:4000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  pgdata:

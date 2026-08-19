@@ -49,5 +49,5 @@ export async function fetchApiRaw(
     headers["Content-Type"] = "application/json";
   }
 
-  return fetch(`${API_URL}${path}`, { ...options, headers });
+  return fetch(`${API_URL}${path}`, { ...options, headers, cache: "no-store" });
 }

@@ -1,0 +1,12 @@
+node_modules
+.git
+.env
+.env.local
+*.log
+dist
+.next
+.nuxt
+.turbo
+testsprite_tests
+SECURITE_AUDIT.md
+README.md
