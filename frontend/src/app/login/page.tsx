@@ -50,8 +50,6 @@ export default function LoginPage() {
     }
   };
 
-  const fillDemo = (u: string, p: string) => { setUsername(u); setPassword(p); setError(null); };
-
   return (
     <div className="min-h-screen bg-[#FAFBFF] flex flex-col justify-center items-center p-4 relative overflow-hidden">
       <div className="absolute -top-20 -left-20 w-72 h-72 bg-blue-100 rounded-full blur-3xl pointer-events-none" />
@@ -114,15 +112,6 @@ export default function LoginPage() {
             )}
           </button>
         </form>
-
-        <div className="mt-6 pt-4 border-t border-slate-100">
-          <p className="text-[10px] text-slate-400 text-center mb-2">Comptes de démonstration</p>
-          <div className="flex gap-2 justify-center">
-            <button onClick={() => fillDemo("admin", "admin123")} className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-[11px] font-semibold rounded-lg transition-colors">Admin</button>
-            <button onClick={() => fillDemo("comptable", "comptable123")} className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 text-[11px] font-semibold rounded-lg transition-colors">Comptable</button>
-            <button onClick={() => fillDemo("visiteur", "visiteur123")} className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-500 text-[11px] font-semibold rounded-lg transition-colors">Visiteur</button>
-          </div>
-        </div>
       </div>
     </div>
   );

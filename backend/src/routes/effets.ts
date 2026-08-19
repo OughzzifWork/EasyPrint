@@ -207,7 +207,7 @@ router.delete("/:id", authMiddleware, canEditOnly, async (req, res) => {
       return res.status(403).json({ error: "Accès refusé." });
     }
 
-    if (existingEffet.status === "PRINTED") {
+    if (existingEffet.status === "PRINTED" && !admin) {
       return res.status(400).json({ error: "Impossible de supprimer un effet déjà imprimé." });
     }
 
@@ -292,6 +292,16 @@ router.post("/:id/restore", authMiddleware, canEditOnly, async (req, res) => {
 router.get("/:id/print", authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
+    const offsetX = parseFloat(req.query.offsetX as string) || 0;
+    const offsetY = parseFloat(req.query.offsetY as string) || 0;
+    const orientation = (req.query.orientation as string) === "PORTRAIT" ? "PORTRAIT" : "LANDSCAPE";
+    const decimals = parseInt(req.query.decimals as string);
+    const validDecimals = [0, 1, 2, 3].includes(decimals) ? decimals : 2;
+    const thousandSep = (req.query.thousandSep as string) || " ";
+    const currency = (req.query.currency as string) || "MAD";
+    const dateFormatParam = (req.query.dateFormat as string) || "DD/MM/YYYY";
+    const amountPrefix = (req.query.amountPrefix as string) || "";
+    const amountSuffix = (req.query.amountSuffix as string) || "";
     const effet = await prisma.effet.findUnique({
       where: { id },
       include: { bank: true, template: { include: { fields: true } } },
@@ -315,13 +325,28 @@ router.get("/:id/print", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "Aucun modèle d'impression actif configuré pour les effets sur cette banque." });
     }
 
-    const formattedCreationDate = effet.creationDate
-      ? new Date(effet.creationDate).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" })
-      : "";
-    const formattedDueDate = effet.dueDate
-      ? new Date(effet.dueDate).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" })
-      : "";
-    const formattedAmount = `${Number(effet.amountNumeric).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} MAD`;
+    const formatAmount = (num: number) => {
+      const fixed = num.toFixed(validDecimals);
+      const [intPart, decPart] = fixed.split(".");
+      const withSep = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, thousandSep);
+      return decPart ? `${withSep}${thousandSep}${decPart}` : withSep;
+    };
+
+    const formatDate = (date: Date) => {
+      const dd = String(date.getDate()).padStart(2, "0");
+      const mm = String(date.getMonth() + 1).padStart(2, "0");
+      const yyyy = date.getFullYear();
+      switch (dateFormatParam) {
+        case "MM/DD/YYYY": return `${mm}/${dd}/${yyyy}`;
+        case "YYYY-MM-DD": return `${yyyy}-${mm}-${dd}`;
+        case "DD-MM-YYYY": return `${dd}-${mm}-${yyyy}`;
+        default: return `${dd}/${mm}/${yyyy}`;
+      }
+    };
+
+    const formattedCreationDate = effet.creationDate ? formatDate(new Date(effet.creationDate)) : "";
+    const formattedDueDate = effet.dueDate ? formatDate(new Date(effet.dueDate)) : "";
+    const formattedAmount = `${amountPrefix} ${formatAmount(Number(effet.amountNumeric))} ${currency} ${amountSuffix}`.trim();
 
     const dataMap: Record<string, string> = {
       beneficiary: effet.beneficiary,
@@ -344,9 +369,12 @@ router.get("/:id/print", authMiddleware, async (req, res) => {
     const pdfBytes = await generateCalibratedPDF({
       physicalWidthMm: template.physicalWidthMm,
       physicalHeightMm: template.physicalHeightMm,
-      backgroundImageUrl: template.backgroundImageUrl || null,
+      backgroundImageUrl: null,
       fields: fieldsToPrint,
       drawGridOrBoxes: false,
+      offsetX,
+      offsetY,
+      orientation,
     });
 
     await prisma.effet.update({ where: { id }, data: { status: "PRINTED", printedAt: new Date() } });

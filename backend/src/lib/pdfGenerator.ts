@@ -19,26 +19,41 @@ export interface PDFGenerationOptions {
   backgroundImageUrl?: string | null;
   fields: FieldToPrint[];
   drawGridOrBoxes?: boolean;
+  offsetX?: number;
+  offsetY?: number;
+  orientation?: "LANDSCAPE" | "PORTRAIT";
 }
 
 const POINTS_PER_MM = 72 / 25.4;
+const A4_PORTRAIT = { w: 210, h: 297 };
+const A4_LANDSCAPE = { w: 297, h: 210 };
 
 export async function generateCalibratedPDF(options: PDFGenerationOptions): Promise<Uint8Array> {
   const { backgroundImageUrl, fields, drawGridOrBoxes } = options;
 
-  const physicalWidthMm = (options.physicalWidthMm && options.physicalWidthMm > 0)
+  const docWidthMm = (options.physicalWidthMm && options.physicalWidthMm > 0)
     ? options.physicalWidthMm
     : 210;
-  const physicalHeightMm = (options.physicalHeightMm && options.physicalHeightMm > 0)
+  const docHeightMm = (options.physicalHeightMm && options.physicalHeightMm > 0)
     ? options.physicalHeightMm
-    : 297;
+    : 100;
+
+  const isLandscape = options.orientation
+    ? options.orientation === "LANDSCAPE"
+    : docWidthMm > docHeightMm;
+  const a4 = isLandscape ? A4_LANDSCAPE : A4_PORTRAIT;
+  const isSmallDoc = docWidthMm < a4.w || docHeightMm < a4.h;
+
+  const pageWidthMm = isSmallDoc ? a4.w : docWidthMm;
+  const pageHeightMm = isSmallDoc ? a4.h : docHeightMm;
 
   const pdfDoc = await PDFDocument.create();
-
-  const pageWidthPt = physicalWidthMm * POINTS_PER_MM;
-  const pageHeightPt = physicalHeightMm * POINTS_PER_MM;
-
+  const pageWidthPt = pageWidthMm * POINTS_PER_MM;
+  const pageHeightPt = pageHeightMm * POINTS_PER_MM;
   const page = pdfDoc.addPage([pageWidthPt, pageHeightPt]);
+
+  const offsetX = (isSmallDoc ? pageWidthMm - docWidthMm - 10 : 0) + (options.offsetX || 0);
+  const offsetY = (isSmallDoc ? (pageHeightMm - docHeightMm) / 2 : 0) + (options.offsetY || 0);
 
   if (backgroundImageUrl) {
     try {
@@ -62,11 +77,13 @@ export async function generateCalibratedPDF(options: PDFGenerationOptions): Prom
         } else {
           embeddedImage = await pdfDoc.embedJpg(imageBytes);
         }
+        const imgX = offsetX * POINTS_PER_MM;
+        const imgY = offsetY * POINTS_PER_MM;
         page.drawImage(embeddedImage, {
-          x: 0,
-          y: 0,
-          width: pageWidthPt,
-          height: pageHeightPt,
+          x: imgX,
+          y: imgY,
+          width: docWidthMm * POINTS_PER_MM,
+          height: docHeightMm * POINTS_PER_MM,
           opacity: drawGridOrBoxes ? 0.35 : 1.0,
         });
       }
@@ -125,8 +142,8 @@ export async function generateCalibratedPDF(options: PDFGenerationOptions): Prom
     const lineHeightPt = fontSizePt * 1.35;
     const text = sanitizeForWinAnsi(String(field.value));
 
-    const fieldXPt = field.x * POINTS_PER_MM;
-    const fieldYPt = (physicalHeightMm - field.y) * POINTS_PER_MM;
+    const fieldXPt = (field.x + offsetX) * POINTS_PER_MM;
+    const fieldYPt = (pageHeightMm - field.y - offsetY) * POINTS_PER_MM;
     const fieldWidthPt = field.width * POINTS_PER_MM;
 
     const lines = wrapText(text, font, fontSizePt, fieldWidthPt);
