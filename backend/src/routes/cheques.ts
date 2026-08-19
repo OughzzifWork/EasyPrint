@@ -28,8 +28,8 @@ router.get("/", authMiddleware, async (req, res) => {
   if (status) where.status = status;
   if (search) {
     where.OR = [
-      { beneficiary: { contains: search } },
-      { creationPlace: { contains: search } },
+      { beneficiary: { contains: search, mode: 'insensitive' } },
+      { creationPlace: { contains: search, mode: 'insensitive' } },
     ];
   }
 
@@ -152,7 +152,7 @@ router.put("/:id", authMiddleware, canEditOnly, validate(updateChequeSchema), as
       return res.status(403).json({ error: "Accès refusé." });
     }
 
-    const numAmount = amountNumeric !== undefined ? parseFloat(amountNumeric) : existingCheque.amountNumeric;
+    const numAmount = amountNumeric !== undefined ? parseFloat(amountNumeric) : Number(existingCheque.amountNumeric);
     const finalAmountWords = amountWords || convertAmountToWordsFr(numAmount);
 
     const updatedCheque = await prisma.cheque.update({
@@ -311,7 +311,7 @@ router.get("/:id/print", authMiddleware, async (req, res) => {
     const formattedDate = cheque.creationDate
       ? new Date(cheque.creationDate).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" })
       : "";
-    const formattedAmount = `${cheque.amountNumeric.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} MAD`;
+    const formattedAmount = `${Number(cheque.amountNumeric).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} MAD`;
 
     const dataMap: Record<string, string> = {
       beneficiary: cheque.beneficiary,
@@ -331,7 +331,7 @@ router.get("/:id/print", authMiddleware, async (req, res) => {
     const pdfBytes = await generateCalibratedPDF({
       physicalWidthMm: template.physicalWidthMm,
       physicalHeightMm: template.physicalHeightMm,
-      backgroundImageUrl: null,
+      backgroundImageUrl: template.backgroundImageUrl || null,
       fields: fieldsToPrint,
       drawGridOrBoxes: false,
     });

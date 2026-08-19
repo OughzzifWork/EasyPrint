@@ -664,7 +664,7 @@ export default function EffetsPage() {
                       {e.dueDate ? new Date(e.dueDate).toLocaleDateString("fr-FR") : "-"}
                     </td>
                     <td className="py-4 px-6 font-mono font-bold text-[#1E3A8A]">
-                      {e.amountNumeric.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} #
+                      {Number(e.amountNumeric).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} #
                     </td>
                     <td className="py-4 px-6 text-xs text-slate-600">{e.createdByName || "—"}</td>
                     <td className="py-4 px-6 text-xs text-slate-500">{e.createdAt ? new Date(e.createdAt).toLocaleDateString("fr-FR") : "—"}</td>

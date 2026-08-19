@@ -15,7 +15,7 @@ export const createTemplateSchema = z.object({
   bankId: z.string().uuid("ID de banque invalide."),
   documentType: z.enum(["CHEQUE", "EFFET"], { message: "Le type de document doit être CHEQUE ou EFFET." }),
   name: z.string().min(1, "Le nom du modèle est obligatoire.").max(200).trim(),
-  backgroundImageUrl: z.string().max(2000).optional().nullable(),
+  backgroundImageUrl: z.string().max(5000).optional().nullable(),
   physicalWidthMm: z.coerce.number().positive().optional().default(210),
   physicalHeightMm: z.coerce.number().positive().optional().default(100),
   isActive: z.coerce.boolean().optional().default(true),
@@ -25,7 +25,7 @@ export const createTemplateSchema = z.object({
 
 export const updateTemplateSchema = z.object({
   name: z.string().min(1).max(200).trim().optional(),
-  backgroundImageUrl: z.string().max(2000).optional().nullable(),
+  backgroundImageUrl: z.string().max(5000).optional().nullable(),
   physicalWidthMm: z.coerce.number().positive().optional(),
   physicalHeightMm: z.coerce.number().positive().optional(),
   isActive: z.coerce.boolean().optional(),
@@ -36,7 +36,7 @@ export const updateTemplateSchema = z.object({
 export const previewTemplateSchema = z.object({
   physicalWidthMm: z.coerce.number().positive().optional().default(210),
   physicalHeightMm: z.coerce.number().positive().optional().default(100),
-  backgroundImageUrl: z.string().max(2000).optional().nullable(),
+  backgroundImageUrl: z.string().max(5000).optional().nullable(),
   fields: z.array(templateFieldSchema).optional().default([]),
   drawGridOrBoxes: z.coerce.boolean().optional().default(true),
   sampleData: z.record(z.string(), z.string()).optional().default({}),

@@ -632,7 +632,7 @@ export default function ChequesPage() {
                     </td>
                     <td className="py-4 px-6 font-semibold text-slate-900">{c.beneficiary}</td>
                     <td className="py-4 px-6 font-mono font-bold text-[#1E3A8A]">
-                      {c.amountNumeric.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} #
+                      {Number(c.amountNumeric).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} #
                     </td>
                     <td className="py-4 px-6 text-xs text-slate-500">
                       <p className="font-semibold text-slate-800">{c.creationPlace}</p>

@@ -28,9 +28,9 @@ router.get("/", authMiddleware, async (req, res) => {
   if (status) where.status = status;
   if (search) {
     where.OR = [
-      { beneficiary: { contains: search } },
-      { sapCode: { contains: search } },
-      { cause: { contains: search } },
+      { beneficiary: { contains: search, mode: 'insensitive' } },
+      { sapCode: { contains: search, mode: 'insensitive' } },
+      { cause: { contains: search, mode: 'insensitive' } },
     ];
   }
 
@@ -156,7 +156,7 @@ router.put("/:id", authMiddleware, canEditOnly, validate(updateEffetSchema), asy
       return res.status(403).json({ error: "Accès refusé." });
     }
 
-    const numAmount = amountNumeric !== undefined ? parseFloat(amountNumeric) : existingEffet.amountNumeric;
+    const numAmount = amountNumeric !== undefined ? parseFloat(amountNumeric) : Number(existingEffet.amountNumeric);
     const finalAmountWords = amountWords || convertAmountToWordsFr(numAmount);
 
     const updatedEffet = await prisma.effet.update({
@@ -321,7 +321,7 @@ router.get("/:id/print", authMiddleware, async (req, res) => {
     const formattedDueDate = effet.dueDate
       ? new Date(effet.dueDate).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" })
       : "";
-    const formattedAmount = `${effet.amountNumeric.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} MAD`;
+    const formattedAmount = `${Number(effet.amountNumeric).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} MAD`;
 
     const dataMap: Record<string, string> = {
       beneficiary: effet.beneficiary,
@@ -344,7 +344,7 @@ router.get("/:id/print", authMiddleware, async (req, res) => {
     const pdfBytes = await generateCalibratedPDF({
       physicalWidthMm: template.physicalWidthMm,
       physicalHeightMm: template.physicalHeightMm,
-      backgroundImageUrl: null,
+      backgroundImageUrl: template.backgroundImageUrl || null,
       fields: fieldsToPrint,
       drawGridOrBoxes: false,
     });

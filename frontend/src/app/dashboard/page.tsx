@@ -48,14 +48,14 @@ export default function DashboardPage() {
   activeCheques.forEach((c) => {
     const key = c.entityId || "_none";
     const ex = entityMap.get(key) || { code: c.entity?.code || "—", name: c.entity?.name || "Non assigné", chequesCount: 0, effetsCount: 0, chequesTotal: 0, effetsTotal: 0, printedCount: 0 };
-    ex.chequesCount++; ex.chequesTotal += c.amountNumeric;
+    ex.chequesCount++; ex.chequesTotal += Number(c.amountNumeric);
     if (c.printedAt) ex.printedCount++;
     entityMap.set(key, ex);
   });
   activeEffets.forEach((e) => {
     const key = e.entityId || "_none";
     const ex = entityMap.get(key) || { code: e.entity?.code || "—", name: e.entity?.name || "Non assigné", chequesCount: 0, effetsCount: 0, chequesTotal: 0, effetsTotal: 0, printedCount: 0 };
-    ex.effetsCount++; ex.effetsTotal += e.amountNumeric;
+    ex.effetsCount++; ex.effetsTotal += Number(e.amountNumeric);
     if (e.printedAt) ex.printedCount++;
     entityMap.set(key, ex);
   });
@@ -67,12 +67,12 @@ export default function DashboardPage() {
   activeCheques.forEach((c) => {
     const key = c.beneficiary.trim().toUpperCase();
     const ex = clientMap.get(key) || { name: c.beneficiary.trim(), chequesCount: 0, effetsCount: 0, chequesTotal: 0, effetsTotal: 0, grandTotal: 0 };
-    ex.chequesCount++; ex.chequesTotal += c.amountNumeric; ex.grandTotal += c.amountNumeric; clientMap.set(key, ex);
+    ex.chequesCount++; ex.chequesTotal += Number(c.amountNumeric); ex.grandTotal += Number(c.amountNumeric); clientMap.set(key, ex);
   });
   activeEffets.forEach((e) => {
     const key = e.beneficiary.trim().toUpperCase();
     const ex = clientMap.get(key) || { name: e.beneficiary.trim(), chequesCount: 0, effetsCount: 0, chequesTotal: 0, effetsTotal: 0, grandTotal: 0 };
-    ex.effetsCount++; ex.effetsTotal += e.amountNumeric; ex.grandTotal += e.amountNumeric; clientMap.set(key, ex);
+    ex.effetsCount++; ex.effetsTotal += Number(e.amountNumeric); ex.grandTotal += Number(e.amountNumeric); clientMap.set(key, ex);
   });
   const clientAnalysis = Array.from(clientMap.values()).sort((a, b) => b.grandTotal - a.grandTotal);
   const maxClientTotal = clientAnalysis[0]?.grandTotal || 1;
@@ -81,7 +81,7 @@ export default function DashboardPage() {
   const bankAnalysis = banks.map((b) => {
     const bc = activeCheques.filter((c) => c.bankId === b.id);
     const be = activeEffets.filter((e) => e.bankId === b.id);
-    return { id: b.id, name: b.name, code: b.code, logoUrl: b.logoUrl, chequesCount: bc.length, effetsCount: be.length, chequesTotal: bc.reduce((s, c) => s + c.amountNumeric, 0), effetsTotal: be.reduce((s, e) => s + e.amountNumeric, 0), grandTotal: bc.reduce((s, c) => s + c.amountNumeric, 0) + be.reduce((s, e) => s + e.amountNumeric, 0) };
+    return { id: b.id, name: b.name, code: b.code, logoUrl: b.logoUrl, chequesCount: bc.length, effetsCount: be.length, chequesTotal: bc.reduce((s, c) => s + Number(c.amountNumeric), 0), effetsTotal: be.reduce((s, e) => s + Number(e.amountNumeric), 0), grandTotal: bc.reduce((s, c) => s + Number(c.amountNumeric), 0) + be.reduce((s, e) => s + Number(e.amountNumeric), 0) };
   }).sort((a, b) => b.grandTotal - a.grandTotal);
   const totalPortfolio = bankAnalysis.reduce((s, b) => s + b.grandTotal, 0);
 

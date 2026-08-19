@@ -1,4 +1,6 @@
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import fs from "fs";
+import path from "path";
 
 export interface FieldToPrint {
   fieldKey: string;
@@ -38,20 +40,28 @@ export async function generateCalibratedPDF(options: PDFGenerationOptions): Prom
 
   const page = pdfDoc.addPage([pageWidthPt, pageHeightPt]);
 
-  if (backgroundImageUrl && backgroundImageUrl.startsWith("data:image/")) {
+  if (backgroundImageUrl) {
     try {
-      let embeddedImage;
-      if (backgroundImageUrl.startsWith("data:image/png")) {
+      let imageBytes: Buffer | null = null;
+      if (backgroundImageUrl.startsWith("data:image/")) {
         const base64Data = backgroundImageUrl.split(",")[1];
-        const imageBytes = Buffer.from(base64Data, "base64");
-        embeddedImage = await pdfDoc.embedPng(imageBytes);
-      } else if (backgroundImageUrl.startsWith("data:image/jpeg") || backgroundImageUrl.startsWith("data:image/jpg")) {
-        const base64Data = backgroundImageUrl.split(",")[1];
-        const imageBytes = Buffer.from(base64Data, "base64");
-        embeddedImage = await pdfDoc.embedJpg(imageBytes);
+        imageBytes = Buffer.from(base64Data, "base64");
+      } else if (backgroundImageUrl.startsWith("/")) {
+        const filePath = path.join(process.cwd(), "..", "frontend", "public", backgroundImageUrl);
+        if (fs.existsSync(filePath)) {
+          imageBytes = fs.readFileSync(filePath);
+        } else {
+          console.warn("Background image file not found:", filePath);
+        }
       }
 
-      if (embeddedImage) {
+      if (imageBytes) {
+        let embeddedImage;
+        if (backgroundImageUrl.endsWith(".png") || backgroundImageUrl.includes("data:image/png")) {
+          embeddedImage = await pdfDoc.embedPng(imageBytes);
+        } else {
+          embeddedImage = await pdfDoc.embedJpg(imageBytes);
+        }
         page.drawImage(embeddedImage, {
           x: 0,
           y: 0,

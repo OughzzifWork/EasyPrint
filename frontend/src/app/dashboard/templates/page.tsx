@@ -30,6 +30,7 @@ export default function TemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [typeFilter, setTypeFilter] = useState<"ALL" | "CHEQUE" | "EFFET">("ALL");
 
   // PDF Preview Modal
   const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
@@ -116,6 +117,35 @@ export default function TemplatesPage() {
         )}
       </div>
 
+      {/* Type Filter */}
+      {templates.length > 0 && (
+        <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200/80 shadow-sm w-fit">
+          {(["ALL", "CHEQUE", "EFFET"] as const).map((type) => (
+            <button
+              key={type}
+              onClick={() => setTypeFilter(type)}
+              className={clsx(
+                "px-4 py-1.5 rounded-lg text-xs font-semibold transition-all",
+                typeFilter === type
+                  ? type === "CHEQUE"
+                    ? "bg-emerald-100 text-emerald-700 shadow-sm"
+                    : type === "EFFET"
+                    ? "bg-amber-100 text-amber-700 shadow-sm"
+                    : "bg-[#1E3A8A] text-white shadow-sm"
+                  : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+              )}
+            >
+              {type === "ALL" ? "Tous" : type === "CHEQUE" ? "Chèques" : "Effets"}
+              {type !== "ALL" && (
+                <span className="ml-1.5 text-[10px] opacity-70">
+                  ({templates.filter((t) => t.documentType === type).length})
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
       {error && (
         <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -160,7 +190,9 @@ export default function TemplatesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {templates.map((tmpl) => (
+          {templates
+            .filter((tmpl) => typeFilter === "ALL" || tmpl.documentType === typeFilter)
+            .map((tmpl) => (
             <div
               key={tmpl.id}
               className={clsx(

@@ -21,11 +21,11 @@ router.get("/", authMiddleware, async (req, res) => {
   if (userId) where.userId = userId;
   if (search) {
     where.OR = [
-      { entityId: { contains: search } },
-      { oldValue: { contains: search } },
-      { newValue: { contains: search } },
-      { user: { fullName: { contains: search } } },
-      { user: { username: { contains: search } } },
+      { entityId: { contains: search, mode: 'insensitive' } },
+      { oldValue: { contains: search, mode: 'insensitive' } },
+      { newValue: { contains: search, mode: 'insensitive' } },
+      { user: { fullName: { contains: search, mode: 'insensitive' } } },
+      { user: { username: { contains: search, mode: 'insensitive' } } },
     ];
   }
 
