@@ -89,7 +89,7 @@ export default function LoginPage() {
             <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Nom d'utilisateur</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-300"><User className="w-4 h-4" /></div>
-              <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} required placeholder="ex: admin" disabled={cooldown > 0}
+              <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} required placeholder="ex: admin" disabled={cooldown > 0} suppressHydrationWarning
                 className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed" />
             </div>
           </div>
@@ -97,11 +97,11 @@ export default function LoginPage() {
             <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Mot de passe</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-300"><Lock className="w-4 h-4" /></div>
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" disabled={cooldown > 0}
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" disabled={cooldown > 0} suppressHydrationWarning
                 className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed" />
             </div>
           </div>
-          <button type="submit" disabled={isLoading || cooldown > 0}
+          <button type="submit" disabled={isLoading || cooldown > 0} suppressHydrationWarning
             className="w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold text-sm rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 mt-2 shadow-lg shadow-blue-500/25 transition-all">
             {cooldown > 0 ? (
               <><Clock className="w-4 h-4" /><span>Attendez {cooldown}s...</span></>
