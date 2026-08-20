@@ -1,7 +1,7 @@
 function getApiUrl(): string {
   if (typeof window === "undefined") return "http://localhost:4000";
   if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
-  return `${window.location.protocol}//${window.location.hostname}:4000`;
+  return "";
 }
 
 const API_URL = getApiUrl();

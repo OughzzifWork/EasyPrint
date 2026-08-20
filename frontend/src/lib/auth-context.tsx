@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(async (username: string, password: string) => {
     const API_URL = typeof window !== "undefined"
-      ? (process.env.NEXT_PUBLIC_API_URL || `${window.location.protocol}//${window.location.hostname}:4000`)
+      ? (process.env.NEXT_PUBLIC_API_URL || "")
       : "http://localhost:4000";
     try {
       const res = await fetch(`${API_URL}/api/auth/login`, {
