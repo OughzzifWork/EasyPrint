@@ -16,7 +16,7 @@ router.get("/", adminOnly, async (_req, res) => {
   try {
     const entities = await prisma.entity.findMany({
       orderBy: { name: "asc" },
-      include: { _count: { select: { users: true, bankEntities: true, cheques: true, effets: true } } },
+      include: { _count: { select: { users: true, bankEntities: true, cheques: true, effets: true } }, bankEntities: { include: { bank: true } } },
     });
     return res.json(entities.map(e => ({ ...e, sapPassword: e.sapPassword ? maskPassword() : null })));
   } catch (error: any) {
@@ -43,7 +43,7 @@ router.get("/:id", adminOnly, async (req, res) => {
 // Create entity
 router.post("/", adminOnly, validate(createEntitySchema), async (req, res) => {
   try {
-    const { name, code, dataMode, defaultCreationPlace, sapServerUrl, sapCompanyDB, sapUser, sapPassword, sapQuery } = req.body;
+    const { name, code, dataMode, defaultCreationPlace, bankIds, sapServerUrl, sapCompanyDB, sapUser, sapPassword, sapQuery } = req.body;
 
     const existing = await prisma.entity.findUnique({ where: { code } });
     if (existing) return res.status(400).json({ error: "Ce code entité existe déjà." });
@@ -55,7 +55,11 @@ router.post("/", adminOnly, validate(createEntitySchema), async (req, res) => {
         sapServerUrl, sapCompanyDB, sapUser,
         sapPassword: sapPassword ? encrypt(sapPassword) : null,
         sapQuery,
+        bankEntities: {
+          create: (bankIds || []).map((bankId: string) => ({ bankId })),
+        },
       },
+      include: { bankEntities: { include: { bank: true } } },
     });
     return res.status(201).json({ ...entity, sapPassword: entity.sapPassword ? maskPassword() : null });
   } catch (error: any) {
@@ -67,7 +71,7 @@ router.post("/", adminOnly, validate(createEntitySchema), async (req, res) => {
 // Update entity
 router.put("/:id", adminOnly, validate(updateEntitySchema), async (req, res) => {
   try {
-    const { name, code, dataMode, defaultCreationPlace, sapServerUrl, sapCompanyDB, sapUser, sapPassword, sapQuery, active } = req.body;
+    const { name, code, dataMode, defaultCreationPlace, bankIds, sapServerUrl, sapCompanyDB, sapUser, sapPassword, sapQuery, active } = req.body;
     const entity = await prisma.entity.findUnique({ where: { id: req.params.id } });
     if (!entity) return res.status(404).json({ error: "Entité non trouvée." });
 
@@ -76,26 +80,38 @@ router.put("/:id", adminOnly, validate(updateEntitySchema), async (req, res) => 
       if (existing) return res.status(400).json({ error: "Ce code entité existe déjà." });
     }
 
-    const updated = await prisma.entity.update({
-      where: { id: req.params.id },
-      data: {
-        ...(name && { name }),
-        ...(code && { code: code.toUpperCase() }),
-        ...(dataMode && { dataMode }),
-        ...(defaultCreationPlace !== undefined && { defaultCreationPlace }),
-        ...(sapServerUrl !== undefined && { sapServerUrl }),
-        ...(sapCompanyDB !== undefined && { sapCompanyDB }),
-        ...(sapUser !== undefined && { sapUser }),
-        ...(sapPassword !== undefined && {
-          sapPassword: sapPassword === "••••••••" || sapPassword === maskPassword()
-            ? entity.sapPassword
-            : sapPassword === ""
-              ? null
-              : encrypt(sapPassword),
-        }),
-        ...(sapQuery !== undefined && { sapQuery }),
-        ...(active !== undefined && { active }),
-      },
+    const updated = await prisma.$transaction(async (tx) => {
+      if (bankIds !== undefined) {
+        await tx.bankEntity.deleteMany({ where: { entityId: req.params.id } });
+        if (bankIds.length > 0) {
+          await tx.bankEntity.createMany({
+            data: bankIds.map((bankId: string) => ({ entityId: req.params.id, bankId })),
+          });
+        }
+      }
+
+      return tx.entity.update({
+        where: { id: req.params.id },
+        data: {
+          ...(name && { name }),
+          ...(code && { code: code.toUpperCase() }),
+          ...(dataMode && { dataMode }),
+          ...(defaultCreationPlace !== undefined && { defaultCreationPlace }),
+          ...(sapServerUrl !== undefined && { sapServerUrl }),
+          ...(sapCompanyDB !== undefined && { sapCompanyDB }),
+          ...(sapUser !== undefined && { sapUser }),
+          ...(sapPassword !== undefined && {
+            sapPassword: sapPassword === "••••••••" || sapPassword === maskPassword()
+              ? entity.sapPassword
+              : sapPassword === ""
+                ? null
+                : encrypt(sapPassword),
+          }),
+          ...(sapQuery !== undefined && { sapQuery }),
+          ...(active !== undefined && { active }),
+        },
+        include: { bankEntities: { include: { bank: true } } },
+      });
     });
     return res.json({ ...updated, sapPassword: updated.sapPassword ? maskPassword() : null });
   } catch (error: any) {

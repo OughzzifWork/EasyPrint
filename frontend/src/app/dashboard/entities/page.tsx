@@ -9,6 +9,8 @@ import {
   Settings, X, Save, AlertCircle, CheckCircle2, Server, Key, FileText,
 } from "lucide-react";
 
+interface Bank { id: string; name: string; code: string; active: boolean; }
+
 interface Entity {
   id: string;
   name: string;
@@ -23,16 +25,18 @@ interface Entity {
   active: boolean;
   createdAt: string;
   _count: { users: number; bankEntities: number; cheques: number; effets: number };
+  bankEntities?: { bankId: string; bank: Bank }[];
 }
 
 export default function EntitiesPage() {
   const { user } = useAuth();
   const [entities, setEntities] = useState<Entity[]>([]);
+  const [banks, setBanks] = useState<Bank[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showSettings, setShowSettings] = useState<Entity | null>(null);
   const [editingEntity, setEditingEntity] = useState<Entity | null>(null);
-  const [formData, setFormData] = useState({ name: "", code: "", dataMode: "NORMAL", defaultCreationPlace: "Casablanca" });
+  const [formData, setFormData] = useState({ name: "", code: "", dataMode: "NORMAL", defaultCreationPlace: "Casablanca", bankIds: [] as string[] });
   const [sapForm, setSapForm] = useState({ sapServerUrl: "", sapCompanyDB: "", sapUser: "", sapPassword: "", sapQuery: "" });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -41,7 +45,15 @@ export default function EntitiesPage() {
   useEffect(() => {
     if (user?.role !== "ADMIN") return;
     fetchEntities();
+    fetchBanks();
   }, [user]);
+
+  const fetchBanks = async () => {
+    try {
+      const data = await fetchApi("/api/banks");
+      setBanks(data);
+    } catch {}
+  };
 
   const fetchEntities = async () => {
     try {
@@ -67,7 +79,7 @@ export default function EntitiesPage() {
       });
       setSuccess("Entité créée avec succès.");
       setShowModal(false);
-      setFormData({ name: "", code: "", dataMode: "NORMAL", defaultCreationPlace: "Casablanca" });
+      setFormData({ name: "", code: "", dataMode: "NORMAL", defaultCreationPlace: "Casablanca", bankIds: [] });
       fetchEntities();
     } catch (err: any) {
       setError(err.message);
@@ -85,7 +97,7 @@ export default function EntitiesPage() {
       setSuccess("Entité mise à jour.");
       setShowModal(false);
       setEditingEntity(null);
-      setFormData({ name: "", code: "", dataMode: "NORMAL", defaultCreationPlace: "Casablanca" });
+      setFormData({ name: "", code: "", dataMode: "NORMAL", defaultCreationPlace: "Casablanca", bankIds: [] });
       fetchEntities();
     } catch (err: any) {
       setError(err.message);
@@ -133,7 +145,11 @@ export default function EntitiesPage() {
 
   const openEdit = (entity: Entity) => {
     setEditingEntity(entity);
-    setFormData({ name: entity.name, code: entity.code, dataMode: entity.dataMode, defaultCreationPlace: entity.defaultCreationPlace || "Casablanca" });
+    setFormData({
+      name: entity.name, code: entity.code, dataMode: entity.dataMode,
+      defaultCreationPlace: entity.defaultCreationPlace || "Casablanca",
+      bankIds: entity.bankEntities?.map((be) => be.bankId) || [],
+    });
     setShowModal(true);
   };
 
@@ -189,7 +205,7 @@ export default function EntitiesPage() {
       <div className="flex items-center justify-between">
         <p className="text-sm text-slate-400">{entities.length} entité(s)</p>
         <button
-          onClick={() => { setEditingEntity(null); setFormData({ name: "", code: "", dataMode: "NORMAL", defaultCreationPlace: "Casablanca" }); setShowModal(true); }}
+          onClick={() => { setEditingEntity(null); setFormData({ name: "", code: "", dataMode: "NORMAL", defaultCreationPlace: "Casablanca", bankIds: [] }); setShowModal(true); }}
           className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-semibold rounded-xl flex items-center gap-2 shadow-lg shadow-blue-500/20 transition-all"
         >
           <Plus className="w-4 h-4" /> Nouvelle Entité
@@ -261,6 +277,33 @@ export default function EntitiesPage() {
                 <input type="text" value={formData.defaultCreationPlace} onChange={(e) => setFormData({ ...formData, defaultCreationPlace: e.target.value })}
                   className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" placeholder="ex: FES, Casablanca, Tanger..." />
                 <p className="text-[10px] text-slate-400 mt-1">Ville utilisée comme lieu de création pour les documents</p>
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Banques assignées</label>
+                <div className="max-h-40 overflow-y-auto bg-slate-50 border border-slate-200 rounded-xl p-2 space-y-1">
+                  {banks.filter(b => b.active).map((bank) => (
+                    <label key={bank.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-100 cursor-pointer transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={formData.bankIds.includes(bank.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setFormData({ ...formData, bankIds: [...formData.bankIds, bank.id] });
+                          } else {
+                            setFormData({ ...formData, bankIds: formData.bankIds.filter((id) => id !== bank.id) });
+                          }
+                        }}
+                        className="w-3.5 h-3.5 rounded border-slate-300 text-blue-500 focus:ring-blue-500/20"
+                      />
+                      <span className="text-sm text-slate-700">{bank.name}</span>
+                      <span className="text-[10px] font-mono text-slate-400 ml-auto">{bank.code}</span>
+                    </label>
+                  ))}
+                  {banks.filter(b => b.active).length === 0 && (
+                    <p className="text-[11px] text-slate-400 text-center py-2">Aucune banque disponible</p>
+                  )}
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">Sélectionnez les banques utilisables par cette entité</p>
               </div>
               <div>
                 <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Mode de saisie</label>

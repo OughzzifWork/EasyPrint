@@ -86,6 +86,11 @@ router.put("/:id", authMiddleware, adminOnly, validate(updateUserSchema), async 
       return res.status(404).json({ error: "Utilisateur non trouvé." });
     }
 
+    if (existingUser.username === "admin") {
+      if (active === false) return res.status(400).json({ error: "Le compte administrateur système ne peut pas être désactivé." });
+      if (role !== undefined && role !== "ADMIN") return res.status(400).json({ error: "Le rôle de l'administrateur système ne peut pas être modifié." });
+    }
+
     if (!isAdmin(req) && existingUser.entityId !== req.user!.entityId) {
       return res.status(403).json({ error: "Accès refusé." });
     }
@@ -144,6 +149,10 @@ router.delete("/:id", authMiddleware, adminOnly, async (req, res) => {
     const targetUser = await prisma.user.findUnique({ where: { id } });
     if (!targetUser) {
       return res.status(404).json({ error: "Utilisateur non trouvé." });
+    }
+
+    if (targetUser.username === "admin") {
+      return res.status(400).json({ error: "Le compte administrateur système ne peut pas être supprimé." });
     }
 
     if (!isAdmin(req) && targetUser.entityId !== req.user!.entityId) {
