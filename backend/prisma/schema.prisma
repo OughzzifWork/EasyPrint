@@ -12,6 +12,7 @@ model Entity {
   name           String
   code           String             @unique
   dataMode       String             @default("NORMAL") // NORMAL, SAP
+  defaultCreationPlace String       @default("Casablanca")
   sapServerUrl   String?
   sapCompanyDB   String?
   sapUser        String?

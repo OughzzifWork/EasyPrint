@@ -71,6 +71,13 @@ export default function EffetsPage() {
   const [cause, setCause] = useState("");
   const [storedBeneficiaries, setStoredBeneficiaries] = useState<any[]>([]);
 
+  // SAP Mode state
+  const [sapMode, setSapMode] = useState(false);
+  const [sapEntityId, setSapEntityId] = useState<string | null>(null);
+  const [sapLoading, setSapLoading] = useState(false);
+  const [sapLookupError, setSapLookupError] = useState<string | null>(null);
+  const [entityCreationPlace, setEntityCreationPlace] = useState("Casablanca");
+
   useEffect(() => {
     const loadBeneficiaries = async () => {
       try {
@@ -168,6 +175,43 @@ export default function EffetsPage() {
       setAmountWords(convertAmountToWordsFr(num));
     } else {
       setAmountWords("");
+    }
+  };
+
+  // SAP Lookup: fetch document data by SAP code
+  const handleSapLookup = async (code: string) => {
+    if (!sapEntityId || !code.trim()) return;
+    setSapLoading(true);
+    setSapLookupError(null);
+    try {
+      const data = await fetchApi(`/api/entities/${sapEntityId}/sap-lookup/${encodeURIComponent(code.trim())}`);
+      setBeneficiary(data.beneficiary || data.Fournisseur || data.CardName || "");
+      const rawAmount = parseFloat(data.amountNumeric || data.Somme || data.BoeSum || 0);
+      setAmountNumeric(rawAmount > 0 ? String(rawAmount) : "");
+      if (rawAmount > 0) setAmountWords(convertAmountToWordsFr(rawAmount));
+      else if (data.amountWords || data.Somme_lettre || data.TotalWords) {
+        setAmountWords(data.amountWords || data.Somme_lettre || data.TotalWords);
+      }
+      if (data.dueDate || data.Date_Ech) {
+        const d = new Date(data.dueDate || data.Date_Ech);
+        if (!isNaN(d.getTime())) setDueDate(d.toISOString().split("T")[0]);
+      }
+      if (data.creationDate || data.Date_Cpt) {
+        const d = new Date(data.creationDate || data.Date_Cpt);
+        if (!isNaN(d.getTime())) setCreationDate(d.toISOString().split("T")[0]);
+      }
+      setCreationPlace(entityCreationPlace);
+      setCause("");
+
+      const bankCode = (data.bankCode || data.BPBankCod || data.Banque || "").trim();
+      if (bankCode) {
+        const matchedBank = banks.find((b: any) => b.code.toUpperCase() === bankCode.toUpperCase());
+        if (matchedBank) setBankId(matchedBank.id);
+      }
+    } catch (err: any) {
+      setSapLookupError(err.message || "Document SAP non trouvé.");
+    } finally {
+      setSapLoading(false);
     }
   };
 
@@ -423,7 +467,7 @@ export default function EffetsPage() {
               amountNumeric: parseFloat(amountVal),
               amountWords: convertAmountToWordsFr(parseFloat(amountVal)),
               creationDate: new Date().toISOString().split("T")[0],
-              creationPlace: "Casablanca",
+              creationPlace: entityCreationPlace,
               cause: String(causeVal),
             }),
           });
@@ -465,7 +509,7 @@ export default function EffetsPage() {
     setAmountNumeric("");
     setAmountWords("");
     setCreationDate(new Date().toISOString().split("T")[0]);
-    setCreationPlace("Casablanca");
+    setCreationPlace(entityCreationPlace);
     setCause("");
   };
 
@@ -559,9 +603,34 @@ export default function EffetsPage() {
               </button>
 
               <button
-                onClick={() => {
+                onClick={async () => {
                   resetForm();
                   setIsCreateOpen(true);
+                  setSapLookupError(null);
+                  setSapLoading(false);
+                  // Detect SAP mode from user's entity
+                  if (user?.entityId) {
+                    try {
+                      const entData = await fetchApi(`/api/entities/${user.entityId}`);
+                      setEntityCreationPlace(entData.defaultCreationPlace || "Casablanca");
+                      if (entData.dataMode === "SAP") {
+                        setSapMode(true);
+                        setSapEntityId(user.entityId);
+                        if (entData.bankEntities && entData.bankEntities.length > 0) {
+                          setBankId(entData.bankEntities[0].bankId);
+                        }
+                      } else {
+                        setSapMode(false);
+                        setSapEntityId(null);
+                      }
+                    } catch {
+                      setSapMode(false);
+                      setSapEntityId(null);
+                    }
+                  } else {
+                    setSapMode(false);
+                    setSapEntityId(null);
+                  }
                 }}
                 className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#A16207] hover:bg-[#925506] text-white font-semibold text-sm rounded-xl shadow-sm transition-all"
               >
@@ -828,6 +897,11 @@ export default function EffetsPage() {
               <h3 className="font-bold text-lg text-slate-900 flex items-center gap-2">
                 <FileSpreadsheet className="w-5 h-5 text-amber-600" />
                 <span>Saisie d'une nouvelle Lettre de Change (Effet LCN)</span>
+                {sapMode && (
+                  <span className="ml-2 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold border border-blue-200">
+                    Mode SAP B1
+                  </span>
+                )}
               </h3>
               <button onClick={() => setIsCreateOpen(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
@@ -841,7 +915,8 @@ export default function EffetsPage() {
                   <select
                     value={bankId}
                     onChange={(e) => setBankId(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#A16207]/30 font-semibold"
+                    disabled={sapMode}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#A16207]/30 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {banks.map((b) => (
                       <option key={b.id} value={b.id}>
@@ -852,14 +927,43 @@ export default function EffetsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Code SAP / Réf (Optionnel)</label>
-                  <input
-                    type="text"
-                    value={sapCode}
-                    onChange={(e) => setSapCode(e.target.value)}
-                    placeholder="ex: SAP-80291 (Optionnel)"
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#A16207]/30"
-                  />
+                  <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">
+                    {sapMode ? "Code SAP / N° Effet (Obtenir les données)" : "Code SAP / Réf (Optionnel)"}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={sapCode}
+                      onChange={(e) => setSapCode(e.target.value)}
+                      onBlur={(e) => {
+                        if (sapMode && sapEntityId && e.target.value.trim()) {
+                          handleSapLookup(e.target.value);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (sapMode && e.key === "Tab" && sapEntityId && sapCode.trim()) {
+                          handleSapLookup(sapCode);
+                        }
+                      }}
+                      placeholder={sapMode ? "Entrez le N° Effet SAP puis TAB..." : "ex: SAP-80291 (Optionnel)"}
+                      disabled={false}
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#A16207]/30"
+                    />
+                    {sapLoading && (
+                      <div className="absolute right-3 top-2.5">
+                        <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    )}
+                  </div>
+                  {sapLookupError && (
+                    <p className="text-[11px] text-red-600 mt-1">{sapLookupError}</p>
+                  )}
+                  {sapMode && !sapLoading && !sapLookupError && sapCode && beneficiary && (
+                    <p className="text-[11px] text-emerald-600 mt-1 flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" />
+                      Données SAP chargées avec succès
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -881,7 +985,8 @@ export default function EffetsPage() {
                       onFocus={() => setShowBeneficiaryDropdown(true)}
                       onBlur={() => setTimeout(() => setShowBeneficiaryDropdown(false), 200)}
                       placeholder="Tapez pour rechercher ou sélectionnez..."
-                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#A16207]/30 font-medium"
+                      disabled={sapMode}
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#A16207]/30 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                     {showBeneficiaryDropdown && storedBeneficiaries.length > 0 && (
                       <div className="absolute z-20 top-full mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
@@ -933,7 +1038,8 @@ export default function EffetsPage() {
                     required
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#A16207]/30"
+                    disabled={sapMode}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#A16207]/30 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
 
@@ -946,7 +1052,8 @@ export default function EffetsPage() {
                     value={amountNumeric}
                     onChange={(e) => handleAmountNumericChange(e.target.value)}
                     placeholder="ex: 45000.00"
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#A16207]/30"
+                    disabled={sapMode}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#A16207]/30 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -959,7 +1066,8 @@ export default function EffetsPage() {
                   rows={2}
                   value={amountWords}
                   onChange={(e) => setAmountWords(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#A16207]/30 font-medium"
+                  disabled={sapMode}
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#A16207]/30 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -971,7 +1079,8 @@ export default function EffetsPage() {
                     value={cause}
                     onChange={(e) => setCause(e.target.value)}
                     placeholder="ex: Règlement Facture N° 4021"
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#A16207]/30"
+                    disabled={sapMode}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#A16207]/30 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
 
@@ -981,7 +1090,8 @@ export default function EffetsPage() {
                     type="text"
                     value={creationPlace}
                     onChange={(e) => setCreationPlace(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#A16207]/30"
+                    disabled={sapMode}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#A16207]/30 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>

@@ -29,7 +29,7 @@ export async function fetchApi<T = any>(
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || `Erreur ${res.status}`);
+    throw new Error(data.error || data.message || `Erreur ${res.status}`);
   }
 
   const contentType = res.headers.get("content-type") || "";

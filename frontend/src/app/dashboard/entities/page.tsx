@@ -14,6 +14,7 @@ interface Entity {
   name: string;
   code: string;
   dataMode: string;
+  defaultCreationPlace: string;
   sapServerUrl: string | null;
   sapCompanyDB: string | null;
   sapUser: string | null;
@@ -31,7 +32,7 @@ export default function EntitiesPage() {
   const [showModal, setShowModal] = useState(false);
   const [showSettings, setShowSettings] = useState<Entity | null>(null);
   const [editingEntity, setEditingEntity] = useState<Entity | null>(null);
-  const [formData, setFormData] = useState({ name: "", code: "", dataMode: "NORMAL" });
+  const [formData, setFormData] = useState({ name: "", code: "", dataMode: "NORMAL", defaultCreationPlace: "Casablanca" });
   const [sapForm, setSapForm] = useState({ sapServerUrl: "", sapCompanyDB: "", sapUser: "", sapPassword: "", sapQuery: "" });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -66,7 +67,7 @@ export default function EntitiesPage() {
       });
       setSuccess("Entité créée avec succès.");
       setShowModal(false);
-      setFormData({ name: "", code: "", dataMode: "NORMAL" });
+      setFormData({ name: "", code: "", dataMode: "NORMAL", defaultCreationPlace: "Casablanca" });
       fetchEntities();
     } catch (err: any) {
       setError(err.message);
@@ -84,7 +85,7 @@ export default function EntitiesPage() {
       setSuccess("Entité mise à jour.");
       setShowModal(false);
       setEditingEntity(null);
-      setFormData({ name: "", code: "", dataMode: "NORMAL" });
+      setFormData({ name: "", code: "", dataMode: "NORMAL", defaultCreationPlace: "Casablanca" });
       fetchEntities();
     } catch (err: any) {
       setError(err.message);
@@ -132,7 +133,7 @@ export default function EntitiesPage() {
 
   const openEdit = (entity: Entity) => {
     setEditingEntity(entity);
-    setFormData({ name: entity.name, code: entity.code, dataMode: entity.dataMode });
+    setFormData({ name: entity.name, code: entity.code, dataMode: entity.dataMode, defaultCreationPlace: entity.defaultCreationPlace || "Casablanca" });
     setShowModal(true);
   };
 
@@ -188,7 +189,7 @@ export default function EntitiesPage() {
       <div className="flex items-center justify-between">
         <p className="text-sm text-slate-400">{entities.length} entité(s)</p>
         <button
-          onClick={() => { setEditingEntity(null); setFormData({ name: "", code: "", dataMode: "NORMAL" }); setShowModal(true); }}
+          onClick={() => { setEditingEntity(null); setFormData({ name: "", code: "", dataMode: "NORMAL", defaultCreationPlace: "Casablanca" }); setShowModal(true); }}
           className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-semibold rounded-xl flex items-center gap-2 shadow-lg shadow-blue-500/20 transition-all"
         >
           <Plus className="w-4 h-4" /> Nouvelle Entité
@@ -214,6 +215,7 @@ export default function EntitiesPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-2 mb-4 text-[11px] text-slate-400">
+              <span>Lieu: <strong className="text-slate-600">{entity.defaultCreationPlace || "—"}</strong></span>
               <span>Utilisateurs: <strong className="text-slate-600">{entity._count.users}</strong></span>
               <span>Banques: <strong className="text-slate-600">{entity._count.bankEntities}</strong></span>
               <span>Chèques: <strong className="text-slate-600">{entity._count.cheques}</strong></span>
@@ -253,6 +255,12 @@ export default function EntitiesPage() {
                 <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Code</label>
                 <input type="text" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
                   className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" placeholder="ex: SOCA" />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Lieu de création des documents</label>
+                <input type="text" value={formData.defaultCreationPlace} onChange={(e) => setFormData({ ...formData, defaultCreationPlace: e.target.value })}
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" placeholder="ex: FES, Casablanca, Tanger..." />
+                <p className="text-[10px] text-slate-400 mt-1">Ville utilisée comme lieu de création pour les documents</p>
               </div>
               <div>
                 <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Mode de saisie</label>
