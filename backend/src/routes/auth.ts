@@ -4,14 +4,9 @@ import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma";
 import { validate } from "../schemas/validate";
 import { loginSchema } from "../schemas/auth";
+import { JWT_SECRET } from "../lib/config";
 
 const router = Router();
-const JWT_SECRET_RAW = process.env.JWT_SECRET;
-if (!JWT_SECRET_RAW) {
-  console.error("[FATAL] JWT_SECRET is not set in environment variables.");
-  process.exit(1);
-}
-const JWT_SECRET: string = JWT_SECRET_RAW;
 
 router.post("/login", validate(loginSchema), async (req, res) => {
   try {

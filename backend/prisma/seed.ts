@@ -1,12 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import crypto from "crypto";
 
 const prisma = new PrismaClient();
-
-function generatePassword(length: number = 16): string {
-  return crypto.randomBytes(length).toString("base64url").slice(0, length);
-}
 
 async function main() {
   console.log("Seeding database...");

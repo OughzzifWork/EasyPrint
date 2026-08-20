@@ -4,12 +4,9 @@ import { authMiddleware, canEditOnly } from "../middleware/auth";
 import { generateCalibratedPDF, FieldToPrint } from "../lib/pdfGenerator";
 import { validate } from "../schemas/validate";
 import { createTemplateSchema, updateTemplateSchema, previewTemplateSchema } from "../schemas/templates";
+import { isAdmin } from "../lib/utils";
 
 const router = Router();
-
-function isAdmin(req: any): boolean {
-  return req.user!.role === "ADMIN";
-}
 
 router.get("/", authMiddleware, async (req, res) => {
   const bankId = req.query.bankId as string;
@@ -210,7 +207,7 @@ router.put("/:id", authMiddleware, canEditOnly, validate(updateTemplateSchema), 
 });
 
 router.delete("/:id", authMiddleware, async (req, res) => {
-  if (req.user!.role !== "ADMIN") {
+  if (!isAdmin(req)) {
     return res.status(403).json({ error: "Accès refusé. Rôle Administrateur requis." });
   }
 

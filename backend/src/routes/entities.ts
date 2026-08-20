@@ -4,9 +4,7 @@ import { authMiddleware, adminOnly } from "../middleware/auth";
 import { encrypt, decrypt, maskPassword } from "../lib/crypto";
 import { validate } from "../schemas/validate";
 import { createEntitySchema, updateEntitySchema } from "../schemas/entities";
-import { testConnection, executeQuery, executeParameterizedQuery } from "../lib/sapHana";
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const sql = require("mssql");
+import { testConnection, executeQuery, executeParameterizedQuery, sql } from "../lib/sapHana";
 import { convertAmountToWordsFr } from "../lib/numberToWordsFr";
 
 const router = Router();

@@ -3,12 +3,9 @@ import { prisma } from "../lib/prisma";
 import { authMiddleware, adminOnly } from "../middleware/auth";
 import { validate } from "../schemas/validate";
 import { createBankSchema, updateBankSchema } from "../schemas/banks";
+import { isAdmin } from "../lib/utils";
 
 const router = Router();
-
-function isAdmin(req: any): boolean {
-  return req.user!.role === "ADMIN";
-}
 
 router.get("/", authMiddleware, async (req, res) => {
   try {

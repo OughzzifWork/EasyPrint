@@ -1,13 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma";
-
-const JWT_SECRET_RAW = process.env.JWT_SECRET;
-if (!JWT_SECRET_RAW) {
-  console.error("[FATAL] JWT_SECRET is not set in environment variables.");
-  process.exit(1);
-}
-const JWT_SECRET: string = JWT_SECRET_RAW;
+import { JWT_SECRET } from "../lib/config";
 
 export interface AuthUser {
   id: string;

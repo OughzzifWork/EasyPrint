@@ -5,16 +5,10 @@ import { convertAmountToWordsFr } from "../lib/numberToWordsFr";
 import { generateCalibratedPDF, FieldToPrint } from "../lib/pdfGenerator";
 import { validate } from "../schemas/validate";
 import { createChequeSchema, updateChequeSchema } from "../schemas/cheques";
+import { isAdmin, entityWhere } from "../lib/utils";
+import { parsePrintParams, formatAmount, formatDate, ensureBeneficiary, findActiveTemplate } from "../lib/printHelpers";
 
 const router = Router();
-
-function isAdmin(req: any): boolean {
-  return req.user!.role === "ADMIN";
-}
-
-function entityWhere(req: any): Record<string, string> {
-  return isAdmin(req) ? {} : { entityId: req.user!.entityId };
-}
 
 router.get("/", authMiddleware, async (req, res) => {
   const bankId = req.query.bankId as string;
@@ -75,13 +69,7 @@ router.post("/", authMiddleware, canEditOnly, validate(createChequeSchema), asyn
 
     let selectedTemplateId = templateId;
     if (!selectedTemplateId) {
-      const templateWhere: any = { bankId, documentType: "CHEQUE", isActive: true };
-      if (!isAdmin(req) && req.user!.entityId) {
-        templateWhere.templateEntities = { some: { entityId: req.user!.entityId } };
-      }
-      const activeTemplate = await prisma.template.findFirst({
-        where: templateWhere,
-      });
+      const activeTemplate = await findActiveTemplate(bankId, "CHEQUE", req);
       if (!activeTemplate) {
         return res.status(400).json({
           error: "Aucun modèle d'impression actif défini pour cette banque. Veuillez en créer un dans le Concepteur.",
@@ -95,18 +83,7 @@ router.post("/", authMiddleware, canEditOnly, validate(createChequeSchema), asyn
     const trimmedBeneficiary = beneficiary.trim();
     const entityId = req.user!.entityId;
 
-    if (trimmedBeneficiary) {
-      const existingB = await prisma.beneficiary.findFirst({
-        where: { name: trimmedBeneficiary, ...(entityId ? { entityId } : {}) },
-      });
-      if (existingB) {
-        await prisma.beneficiary.update({ where: { id: existingB.id }, data: { active: true } }).catch(() => {});
-      } else {
-        await prisma.beneficiary.create({
-          data: { name: trimmedBeneficiary, category: "FOURNISSEUR", entityId },
-        }).catch(() => {});
-      }
-    }
+    await ensureBeneficiary(trimmedBeneficiary, entityId);
 
     const newCheque = await prisma.cheque.create({
       data: {
@@ -311,38 +288,10 @@ router.get("/:id/print", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "Aucun modèle d'impression actif configuré pour cette banque." });
     }
 
-    const offsetX = parseFloat(req.query.offsetX as string) || 0;
-    const offsetY = parseFloat(req.query.offsetY as string) || 0;
-    const orientation = (req.query.orientation as string) === "PORTRAIT" ? "PORTRAIT" : "LANDSCAPE";
-    const decimals = parseInt(req.query.decimals as string);
-    const validDecimals = [0, 1, 2, 3].includes(decimals) ? decimals : 2;
-    const thousandSep = (req.query.thousandSep as string) || " ";
-    const currency = (req.query.currency as string) || "MAD";
-    const dateFormatParam = (req.query.dateFormat as string) || "DD/MM/YYYY";
-    const amountPrefix = (req.query.amountPrefix as string) || "";
-    const amountSuffix = (req.query.amountSuffix as string) || "";
+    const p = parsePrintParams(req.query as Record<string, any>);
 
-    const formatAmount = (num: number) => {
-      const fixed = num.toFixed(validDecimals);
-      const [intPart, decPart] = fixed.split(".");
-      const withSep = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, thousandSep);
-      return decPart ? `${withSep}${thousandSep}${decPart}` : withSep;
-    };
-
-    const formatDate = (date: Date) => {
-      const dd = String(date.getDate()).padStart(2, "0");
-      const mm = String(date.getMonth() + 1).padStart(2, "0");
-      const yyyy = date.getFullYear();
-      switch (dateFormatParam) {
-        case "MM/DD/YYYY": return `${mm}/${dd}/${yyyy}`;
-        case "YYYY-MM-DD": return `${yyyy}-${mm}-${dd}`;
-        case "DD-MM-YYYY": return `${dd}-${mm}-${yyyy}`;
-        default: return `${dd}/${mm}/${yyyy}`;
-      }
-    };
-
-    const formattedDate = cheque.creationDate ? formatDate(new Date(cheque.creationDate)) : "";
-    const formattedAmount = `${amountPrefix} ${formatAmount(Number(cheque.amountNumeric))} ${currency} ${amountSuffix}`.trim();
+    const formattedDate = cheque.creationDate ? formatDate(new Date(cheque.creationDate), p.dateFormatParam) : "";
+    const formattedAmount = `${p.amountPrefix} ${formatAmount(Number(cheque.amountNumeric), p.validDecimals, p.thousandSep)} ${p.currency} ${p.amountSuffix}`.trim();
 
     const dataMap: Record<string, string> = {
       beneficiary: cheque.beneficiary,
@@ -365,9 +314,9 @@ router.get("/:id/print", authMiddleware, async (req, res) => {
       backgroundImageUrl: null,
       fields: fieldsToPrint,
       drawGridOrBoxes: false,
-      offsetX,
-      offsetY,
-      orientation,
+      offsetX: p.offsetX,
+      offsetY: p.offsetY,
+      orientation: p.orientation,
     });
 
     await prisma.cheque.update({ where: { id }, data: { status: "PRINTED", printedAt: new Date() } });

@@ -3,16 +3,9 @@ import { prisma } from "../lib/prisma";
 import { authMiddleware } from "../middleware/auth";
 import { validate } from "../schemas/validate";
 import { createBeneficiarySchema } from "../schemas/beneficiaries";
+import { isAdmin, entityWhere } from "../lib/utils";
 
 const router = Router();
-
-function isAdmin(req: any): boolean {
-  return req.user!.role === "ADMIN";
-}
-
-function entityWhere(req: any): Record<string, string> {
-  return isAdmin(req) ? {} : { entityId: req.user!.entityId };
-}
 
 router.get("/", authMiddleware, async (req, res) => {
   try {

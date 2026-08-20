@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma";
 import { authMiddleware, adminOnly } from "../middleware/auth";
 import { validate } from "../schemas/validate";
 import { createUserSchema, updateUserSchema } from "../schemas/users";
+import { isAdmin } from "../lib/utils";
 
 const router = Router();
 
@@ -190,9 +191,5 @@ router.delete("/:id", authMiddleware, adminOnly, async (req, res) => {
     return res.status(500).json({ error: "Erreur lors de la désactivation de l'utilisateur." });
   }
 });
-
-function isAdmin(req: any): boolean {
-  return req.user!.role === "ADMIN";
-}
 
 export default router;

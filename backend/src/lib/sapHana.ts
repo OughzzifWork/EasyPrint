@@ -1,6 +1,8 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const sql = require("mssql");
 
+export { sql };
+
 export interface SapConnectionParams {
   serverUrl: string;
   companyDB: string;
@@ -83,4 +85,3 @@ export async function executeParameterizedQuery(
   }
 }
 
-export function closeClient(): void {}
