@@ -71,7 +71,8 @@ router.post("/", authMiddleware, adminOnly, validate(createBankSchema), async (r
 
     return res.status(201).json(newBank);
   } catch (error: any) {
-    return res.status(500).json({ error: error.message || "Erreur lors de la création de la banque." });
+    console.error("[Banks Error]", error.message);
+    return res.status(500).json({ error: "Erreur lors de la création de la banque." });
   }
 });
 
@@ -121,7 +122,8 @@ router.put("/:id", authMiddleware, adminOnly, validate(updateBankSchema), async 
 
     return res.json(updatedBank);
   } catch (error: any) {
-    return res.status(500).json({ error: error.message || "Erreur lors de la mise à jour de la banque." });
+    console.error("[Banks Error]", error.message);
+    return res.status(500).json({ error: "Erreur lors de la mise à jour de la banque." });
   }
 });
 
@@ -180,7 +182,8 @@ router.delete("/:id", authMiddleware, adminOnly, async (req, res) => {
 
     return res.json(toggledBank);
   } catch (error: any) {
-    return res.status(500).json({ error: error.message || "Erreur lors de la modification ou suppression de la banque." });
+    console.error("[Banks Error]", error.message);
+    return res.status(500).json({ error: "Erreur lors de la modification ou suppression de la banque." });
   }
 });
 

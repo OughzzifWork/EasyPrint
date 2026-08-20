@@ -21,7 +21,6 @@ router.post("/reset-db", authMiddleware, adminOnly, async (req, res) => {
     }
 
     await prisma.$transaction([
-      prisma.auditLog.deleteMany({}),
       prisma.templateField.deleteMany({}),
       prisma.cheque.deleteMany({}),
       prisma.effet.deleteMany({}),
@@ -32,6 +31,16 @@ router.post("/reset-db", authMiddleware, adminOnly, async (req, res) => {
       prisma.user.deleteMany({ where: { id: { notIn: adminIds } } }),
       prisma.entity.deleteMany({}),
     ]);
+
+    await prisma.auditLog.create({
+      data: {
+        userId: req.user!.id,
+        entityType: "SYSTEM",
+        entityId: "reset-db",
+        action: "RESET_DATABASE",
+        newValue: JSON.stringify({ message: "Base de données réinitialisée par " + req.user!.username }),
+      },
+    });
 
     return res.json({ message: "Base réinitialisée. Banques et administrateurs système conservés." });
   } catch (error) {

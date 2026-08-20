@@ -8,8 +8,22 @@ export function originCheck(req: Request, res: Response, next: NextFunction): vo
     return;
   }
 
+  if (req.path === "/auth/login") {
+    next();
+    return;
+  }
+
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    next();
+    return;
+  }
+
   const origin = req.headers.origin || req.headers.referer;
-  if (!origin) { next(); return; }
+  if (!origin) {
+    res.status(403).json({ error: "En-tête d'origine manquant." });
+    return;
+  }
 
   let originUrl: string;
   try {

@@ -136,7 +136,8 @@ router.post("/", authMiddleware, canEditOnly, validate(createChequeSchema), asyn
 
     return res.status(201).json(newCheque);
   } catch (error: any) {
-    return res.status(500).json({ error: error.message || "Erreur lors de la création du chèque." });
+    console.error("[Cheques Error]", error.message);
+    return res.status(500).json({ error: "Erreur lors de la création du chèque." });
   }
 });
 
@@ -183,7 +184,8 @@ router.put("/:id", authMiddleware, canEditOnly, validate(updateChequeSchema), as
 
     return res.json(updatedCheque);
   } catch (error: any) {
-    return res.status(500).json({ error: error.message || "Erreur lors de la modification du chèque." });
+    console.error("[Cheques Error]", error.message);
+    return res.status(500).json({ error: "Erreur lors de la modification du chèque." });
   }
 });
 
@@ -278,7 +280,8 @@ router.post("/:id/restore", authMiddleware, canEditOnly, async (req, res) => {
 
     return res.json({ message: "Chèque restauré avec succès.", cheque: restoredCheque });
   } catch (error: any) {
-    return res.status(500).json({ error: error.message || "Erreur lors de la restauration du chèque." });
+    console.error("[Cheques Error]", error.message);
+    return res.status(500).json({ error: "Erreur lors de la restauration du chèque." });
   }
 });
 

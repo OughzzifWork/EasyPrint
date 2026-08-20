@@ -118,7 +118,8 @@ router.post("/", authMiddleware, canEditOnly, validate(createTemplateSchema), as
 
     return res.status(201).json(newTemplate);
   } catch (error: any) {
-    return res.status(500).json({ error: error.message || "Erreur lors de la création du modèle." });
+    console.error("[Templates Error]", error.message);
+    return res.status(500).json({ error: "Erreur lors de la création du modèle." });
   }
 });
 
@@ -203,7 +204,8 @@ router.put("/:id", authMiddleware, canEditOnly, validate(updateTemplateSchema), 
 
     return res.json(updatedTemplate);
   } catch (error: any) {
-    return res.status(500).json({ error: error.message || "Erreur lors de la mise à jour du modèle." });
+    console.error("[Templates Error]", error.message);
+    return res.status(500).json({ error: "Erreur lors de la mise à jour du modèle." });
   }
 });
 
@@ -250,7 +252,8 @@ router.delete("/:id", authMiddleware, async (req, res) => {
 
     return res.json({ message: "Modèle supprimé avec succès." });
   } catch (error: any) {
-    return res.status(500).json({ error: error.message || "Erreur lors de la suppression du modèle." });
+    console.error("[Templates Error]", error.message);
+    return res.status(500).json({ error: "Erreur lors de la suppression du modèle." });
   }
 });
 

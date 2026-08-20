@@ -1,14 +1,27 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 const prisma = new PrismaClient();
+
+function generatePassword(length: number = 16): string {
+  return crypto.randomBytes(length).toString("base64url").slice(0, length);
+}
 
 async function main() {
   console.log("Seeding database...");
 
-  const adminPasswordHash = await bcrypt.hash("admin123", 10);
-  const comptablePasswordHash = await bcrypt.hash("comptable123", 10);
-  const visiteurPasswordHash = await bcrypt.hash("visiteur123", 10);
+  const adminPassword = "admin123";
+  const comptablePassword = "comptable123";
+  const visiteurPassword = "visiteur123";
+
+  console.log("[SEED] Admin password (change in production):", adminPassword);
+  console.log("[SEED] Comptable password (change in production):", comptablePassword);
+  console.log("[SEED] Visiteur password (change in production):", visiteurPassword);
+
+  const adminPasswordHash = await bcrypt.hash(adminPassword, 12);
+  const comptablePasswordHash = await bcrypt.hash(comptablePassword, 12);
+  const visiteurPasswordHash = await bcrypt.hash(visiteurPassword, 12);
 
   // Create Users
   const adminUser = await prisma.user.upsert({

@@ -140,7 +140,8 @@ router.post("/", authMiddleware, canEditOnly, validate(createEffetSchema), async
 
     return res.status(201).json(newEffet);
   } catch (error: any) {
-    return res.status(500).json({ error: error.message || "Erreur lors de la création de l'effet." });
+    console.error("[Effets Error]", error.message);
+    return res.status(500).json({ error: "Erreur lors de la création de l'effet." });
   }
 });
 
@@ -190,7 +191,8 @@ router.put("/:id", authMiddleware, canEditOnly, validate(updateEffetSchema), asy
 
     return res.json(updatedEffet);
   } catch (error: any) {
-    return res.status(500).json({ error: error.message || "Erreur lors de la modification de l'effet." });
+    console.error("[Effets Error]", error.message);
+    return res.status(500).json({ error: "Erreur lors de la modification de l'effet." });
   }
 });
 
@@ -285,7 +287,8 @@ router.post("/:id/restore", authMiddleware, canEditOnly, async (req, res) => {
 
     return res.json({ message: "Effet restauré avec succès.", effet: restoredEffet });
   } catch (error: any) {
-    return res.status(500).json({ error: error.message || "Erreur lors de la restauration de l'effet." });
+    console.error("[Effets Error]", error.message);
+    return res.status(500).json({ error: "Erreur lors de la restauration de l'effet." });
   }
 });
 

@@ -4,7 +4,9 @@ import { authMiddleware, adminOnly } from "../middleware/auth";
 import { encrypt, decrypt, maskPassword } from "../lib/crypto";
 import { validate } from "../schemas/validate";
 import { createEntitySchema, updateEntitySchema } from "../schemas/entities";
-import { testConnection, executeQuery } from "../lib/sapHana";
+import { testConnection, executeQuery, executeParameterizedQuery } from "../lib/sapHana";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const sql = require("mssql");
 import { convertAmountToWordsFr } from "../lib/numberToWordsFr";
 
 const router = Router();
@@ -20,7 +22,8 @@ router.get("/", adminOnly, async (_req, res) => {
     });
     return res.json(entities.map(e => ({ ...e, sapPassword: e.sapPassword ? maskPassword() : null })));
   } catch (error: any) {
-    return res.status(500).json({ error: error.message });
+    console.error("[Entities Error]", error.message);
+    return res.status(500).json({ error: "Erreur serveur." });
   }
 });
 
@@ -34,7 +37,8 @@ router.get("/:id", adminOnly, async (req, res) => {
     if (!entity) return res.status(404).json({ error: "Entité non trouvée." });
     return res.json({ ...entity, sapPassword: entity.sapPassword ? maskPassword() : null });
   } catch (error: any) {
-    return res.status(500).json({ error: error.message });
+    console.error("[Entities Error]", error.message);
+    return res.status(500).json({ error: "Erreur serveur." });
   }
 });
 
@@ -57,7 +61,8 @@ router.post("/", adminOnly, validate(createEntitySchema), async (req, res) => {
     });
     return res.status(201).json({ ...entity, sapPassword: entity.sapPassword ? maskPassword() : null });
   } catch (error: any) {
-    return res.status(500).json({ error: error.message });
+    console.error("[Entities Error]", error.message);
+    return res.status(500).json({ error: "Erreur serveur lors de la création de l'entité." });
   }
 });
 
@@ -96,7 +101,8 @@ router.put("/:id", adminOnly, validate(updateEntitySchema), async (req, res) => 
     });
     return res.json({ ...updated, sapPassword: updated.sapPassword ? maskPassword() : null });
   } catch (error: any) {
-    return res.status(500).json({ error: error.message });
+    console.error("[Entities Error]", error.message);
+    return res.status(500).json({ error: "Erreur serveur lors de la mise à jour de l'entité." });
   }
 });
 
@@ -123,7 +129,8 @@ router.delete("/:id", adminOnly, async (req, res) => {
 
     return res.json({ message: "Entité supprimée définitivement." });
   } catch (error: any) {
-    return res.status(500).json({ error: error.message });
+    console.error("[Entities Error]", error.message);
+    return res.status(500).json({ error: "Erreur serveur lors de la suppression de l'entité." });
   }
 });
 
@@ -150,8 +157,9 @@ router.post("/:id/test-sap", adminOnly, async (req, res) => {
     }
     return res.status(400).send(JSON.stringify({ error: result.message }));
   } catch (error: any) {
+    console.error("[SAP Test Error]", error.message);
     res.setHeader("Content-Type", "application/json");
-    return res.status(500).send(JSON.stringify({ error: error.message }));
+    return res.status(500).send(JSON.stringify({ error: "Erreur lors du test de connexion SAP." }));
   }
 });
 
@@ -169,12 +177,12 @@ router.get("/:id/sap-lookup/:code", adminOnly, async (req, res) => {
     if (!code) return res.status(400).json({ error: "Code SAP requis." });
 
     const sapPasswordPlain = decrypt(entity.sapPassword);
-    const escapedCode = code.replace(/'/g, "''");
-    const lookupQuery = `SELECT * FROM (${entity.sapQuery}) AS _q WHERE sapCode LIKE '${escapedCode}%' ORDER BY dueDate DESC`;
+    const lookupQuery = `SELECT * FROM (${entity.sapQuery}) AS _q WHERE sapCode LIKE @code ORDER BY dueDate DESC`;
 
-    const rows = await executeQuery(
+    const rows = await executeParameterizedQuery(
       { serverUrl: entity.sapServerUrl, companyDB: entity.sapCompanyDB, user: entity.sapUser, password: sapPasswordPlain },
-      lookupQuery
+      lookupQuery,
+      [{ name: "code", type: sql.NVarChar, value: code + "%" }]
     );
 
     if (!rows || rows.length === 0) {
@@ -182,7 +190,8 @@ router.get("/:id/sap-lookup/:code", adminOnly, async (req, res) => {
     }
     return res.json(rows[0]);
   } catch (error: any) {
-    return res.status(500).json({ error: error.message });
+    console.error("[SAP Lookup Error]", error.message);
+    return res.status(500).json({ error: "Erreur lors de la recherche SAP." });
   }
 });
 
@@ -315,7 +324,8 @@ router.post("/:id/pull-sap", adminOnly, async (req, res) => {
       imported,
     });
   } catch (error: any) {
-    return res.status(500).json({ error: error.message });
+    console.error("[SAP Pull Error]", error.message);
+    return res.status(500).json({ error: "Erreur lors de l'import SAP." });
   }
 });
 

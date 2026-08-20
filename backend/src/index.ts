@@ -60,7 +60,16 @@ const printLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const resetDbLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  message: { error: "Trop de tentatives de réinitialisation. Réessayez dans 1 heure." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 app.use("/api/auth/login", loginLimiter);
+app.use("/api/admin/reset-db", resetDbLimiter);
 app.use("/api/cheques", printLimiter);
 app.use("/api/effets", printLimiter);
 app.use("/api", apiLimiter);

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { prisma } from "../lib/prisma";
 
 const JWT_SECRET_RAW = process.env.JWT_SECRET;
 if (!JWT_SECRET_RAW) {
@@ -35,8 +36,25 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
   const token = authHeader.split(" ")[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as AuthUser;
-    req.user = decoded;
-    next();
+
+    prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: { id: true, active: true, role: true, canEdit: true, entityId: true },
+    }).then((dbUser) => {
+      if (!dbUser || !dbUser.active) {
+        return res.status(401).json({ error: "Compte désactivé ou supprimé." });
+      }
+      req.user = {
+        ...decoded,
+        active: dbUser.active,
+        role: dbUser.role,
+        canEdit: dbUser.canEdit,
+        entityId: dbUser.entityId,
+      };
+      next();
+    }).catch(() => {
+      return res.status(500).json({ error: "Erreur d'authentification." });
+    });
   } catch {
     return res.status(401).json({ error: "Token invalide ou expiré" });
   }

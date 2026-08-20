@@ -54,7 +54,8 @@ router.post("/login", validate(loginSchema), async (req, res) => {
       user: tokenPayload,
     });
   } catch (error: any) {
-    return res.status(500).json({ error: error.message || "Erreur serveur." });
+    console.error("[Auth Error]", error.message);
+    return res.status(500).json({ error: "Erreur serveur." });
   }
 });
 

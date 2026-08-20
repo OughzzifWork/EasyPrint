@@ -1,4 +1,5 @@
 import { Router } from "express";
+import bcrypt from "bcryptjs";
 import { prisma } from "../lib/prisma";
 import { authMiddleware, adminOnly } from "../middleware/auth";
 import { validate } from "../schemas/validate";
@@ -35,13 +36,12 @@ router.post("/", authMiddleware, adminOnly, validate(createUserSchema), async (r
   try {
     const { fullName, username, password, role, active, canEdit, entityId } = req.body;
 
-    const bcrypt = require("bcryptjs");
     const existingUser = await prisma.user.findUnique({ where: { username } });
     if (existingUser) {
       return res.status(400).json({ error: "Ce nom d'utilisateur est déjà utilisé." });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 12);
 
     const targetEntityId = isAdmin(req) && entityId ? entityId : req.user!.entityId;
 
@@ -70,7 +70,8 @@ router.post("/", authMiddleware, adminOnly, validate(createUserSchema), async (r
 
     return res.status(201).json(newUser);
   } catch (error: any) {
-    return res.status(500).json({ error: error.message || "Erreur serveur lors de la création de l'utilisateur." });
+    console.error("[Users Error]", error.message);
+    return res.status(500).json({ error: "Erreur serveur lors de la création de l'utilisateur." });
   }
 });
 
@@ -103,8 +104,7 @@ router.put("/:id", authMiddleware, adminOnly, validate(updateUserSchema), async 
     if (isAdmin(req) && entityId !== undefined) dataToUpdate.entityId = entityId;
 
     if (newPassword && newPassword.trim() !== "") {
-      const bcrypt = require("bcryptjs");
-      dataToUpdate.passwordHash = await bcrypt.hash(newPassword, 10);
+      dataToUpdate.passwordHash = await bcrypt.hash(newPassword, 12);
     }
 
     const updatedUser = await prisma.user.update({
@@ -126,7 +126,8 @@ router.put("/:id", authMiddleware, adminOnly, validate(updateUserSchema), async 
 
     return res.json(updatedUser);
   } catch (error: any) {
-    return res.status(500).json({ error: error.message || "Erreur serveur lors de la mise à jour de l'utilisateur." });
+    console.error("[Users Error]", error.message);
+    return res.status(500).json({ error: "Erreur serveur lors de la mise à jour de l'utilisateur." });
   }
 });
 

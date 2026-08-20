@@ -65,4 +65,22 @@ export async function executeQuery(
   }
 }
 
+export async function executeParameterizedQuery(
+  params: SapConnectionParams,
+  query: string,
+  inputs: { name: string; type: any; value: string }[]
+): Promise<any[]> {
+  const pool = await sql.connect(getConfig(params));
+  try {
+    const request = pool.request();
+    for (const input of inputs) {
+      request.input(input.name, input.type, input.value);
+    }
+    const result = await request.query(query);
+    return result.recordset || [];
+  } finally {
+    pool.close().catch(() => {});
+  }
+}
+
 export function closeClient(): void {}
