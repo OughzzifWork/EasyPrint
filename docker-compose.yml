@@ -1,44 +1,67 @@
 services:
   postgres:
     image: postgres:16-alpine
-    env_file:
-      - ./postgres.env
+    container_name: easyprint-postgres
+    env_file: postgres.env
+    environment:
+      POSTGRES_DB: easyprint
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U easyprint"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 15
+    restart: unless-stopped
+    networks:
+      - easyprint-network
 
   backend:
     build:
       context: .
       dockerfile: backend/Dockerfile
+    container_name: easyprint-backend
     ports:
       - "4000:4000"
-    env_file:
-      - ./backend/.env
+    environment:
+      DATABASE_URL: "postgresql://easyprint:easyprint@postgres:5432/easyprint?schema=public"
+      JWT_SECRET: "mqn/SCQGg/Mv1K55rbC3vVsgQ3iH+1QDO9gzq0gBmJIbGeggIP5RhXwRE4JPA5shrzyEvKOZ28kl09TrRvKw8A=="
+      PORT: "4000"
+      FRONTEND_URL: "http://localhost:3000"
+      CORS_ORIGINS: "http://localhost:3000,http://backend:4000"
+      SAP_ENCRYPTION_KEY: "Hk2KUMT27Qr3r+eN1wQdZfGla7m+Mu5SggmWklArSaM="
+      NODE_ENV: "production"
     volumes:
       - ./frontend/public/templates:/app/frontend/public/templates
     depends_on:
       postgres:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      - easyprint-network
 
   frontend:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+      args:
+        BACKEND_URL: "http://backend:4000"
+    container_name: easyprint-frontend
     ports:
       - "3000:3000"
     environment:
-      NEXT_PUBLIC_API_URL: "http://localhost:4000"
+      NODE_ENV: "production"
     depends_on:
       - backend
     restart: unless-stopped
+    networks:
+      - easyprint-network
 
 volumes:
   pgdata:
+
+networks:
+  easyprint-network:
+    driver: bridge

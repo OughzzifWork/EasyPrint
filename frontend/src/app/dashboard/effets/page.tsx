@@ -21,6 +21,7 @@ import {
   Clock,
   CheckCheck,
   UserCheck,
+  RefreshCw,
 } from "lucide-react";
 import { clsx } from "clsx";
 
@@ -72,7 +73,7 @@ export default function EffetsPage() {
   const [storedBeneficiaries, setStoredBeneficiaries] = useState<any[]>([]);
 
   // SAP Mode state
-  const [sapMode, setSapMode] = useState(false);
+  const [sapMode, setSapMode] = useState(user?.entityDataMode === "SAP");
   const [sapEntityId, setSapEntityId] = useState<string | null>(null);
   const [sapLoading, setSapLoading] = useState(false);
   const [sapLookupError, setSapLookupError] = useState<string | null>(null);
@@ -602,33 +603,37 @@ export default function EffetsPage() {
                 <span>Import Batch Excel</span>
               </button>
 
+              {user?.entityDataMode === "SAP" && (
+                <button
+                  onClick={() => setSapMode(!sapMode)}
+                  className={clsx(
+                    "inline-flex items-center gap-2 px-3.5 py-2.5 font-semibold text-sm rounded-xl transition-all border",
+                    sapMode
+                      ? "bg-blue-500 hover:bg-blue-600 text-white border-blue-500"
+                      : "bg-white hover:bg-slate-50 text-blue-600 border-blue-200"
+                  )}
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  <span>{sapMode ? "Mode SAP" : "Mode Normal"}</span>
+                </button>
+              )}
+
               <button
                 onClick={async () => {
                   resetForm();
                   setIsCreateOpen(true);
                   setSapLookupError(null);
                   setSapLoading(false);
-                  // Detect SAP mode from user's entity
-                  if (user?.entityId) {
+                  if (sapMode && user?.entityId) {
+                    setSapEntityId(user.entityId);
                     try {
                       const entData = await fetchApi(`/api/entities/${user.entityId}`);
                       setEntityCreationPlace(entData.defaultCreationPlace || "Casablanca");
-                      if (entData.dataMode === "SAP") {
-                        setSapMode(true);
-                        setSapEntityId(user.entityId);
-                        if (entData.bankEntities && entData.bankEntities.length > 0) {
-                          setBankId(entData.bankEntities[0].bankId);
-                        }
-                      } else {
-                        setSapMode(false);
-                        setSapEntityId(null);
+                      if (entData.bankEntities && entData.bankEntities.length > 0) {
+                        setBankId(entData.bankEntities[0].bankId);
                       }
-                    } catch {
-                      setSapMode(false);
-                      setSapEntityId(null);
-                    }
+                    } catch {}
                   } else {
-                    setSapMode(false);
                     setSapEntityId(null);
                   }
                 }}

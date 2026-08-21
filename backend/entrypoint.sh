@@ -1,8 +1,11 @@
 #!/bin/sh
 set -e
 
-echo "Running Prisma migrations..."
+echo "[Backend] Running Prisma migrations..."
 npx prisma migrate deploy
 
-echo "Starting backend..."
-exec npx ts-node src/index.ts
+echo "[Backend] Seeding database..."
+node dist/prisma/seed.js 2>/dev/null || true
+
+echo "[Backend] Starting server..."
+exec node dist/index.js

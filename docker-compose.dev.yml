@@ -1,0 +1,50 @@
+services:
+  postgres:
+    ports:
+      - "5433:5432"
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.dev
+    container_name: easyprint-backend-dev
+    environment:
+      DATABASE_URL: "postgresql://easyprint:easyprint@postgres:5432/easyprint?schema=public"
+      JWT_SECRET: "mqn/SCQGg/Mv1K55rbC3vVsgQ3iH+1QDO9gzq0gBmJIbGeggIP5RhXwRE4JPA5shrzyEvKOZ28kl09TrRvKw8A=="
+      PORT: "4000"
+      FRONTEND_URL: "http://localhost:3000"
+      CORS_ORIGINS: "http://localhost:3000,http://192.168.11.108:3000,http://backend:4000"
+      SAP_ENCRYPTION_KEY: "Hk2KUMT27Qr3r+eN1wQdZfGla7m+Mu5SggmWklArSaM="
+      NODE_ENV: "development"
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/prisma:/app/prisma
+      - ./frontend/public/templates:/app/frontend/public/templates
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - easyprint-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile.dev
+    container_name: easyprint-frontend-dev
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: "development"
+      BACKEND_URL: "http://backend:4000"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/next.config.ts:/app/next.config.ts
+      - ./frontend/tsconfig.json:/app/tsconfig.json
+      - ./frontend/postcss.config.mjs:/app/postcss.config.mjs
+      - ./frontend/eslint.config.mjs:/app/eslint.config.mjs
+      - ./frontend/.env.local:/app/.env.local
+    depends_on:
+      - backend
+    networks:
+      - easyprint-network

@@ -1,7 +1,5 @@
 node_modules
 .git
-.env
-.env.local
 *.log
 dist
 .next
@@ -10,3 +8,13 @@ dist
 testsprite_tests
 SECURITE_AUDIT.md
 README.md
+REFACTORING_RAPPORT.md
+backend/node_modules
+frontend/node_modules
+backend/dist
+frontend/.next
+.env
+.env.local
+.env*.local
+postgres.env
+*.db

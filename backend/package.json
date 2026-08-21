@@ -38,6 +38,7 @@
     "@types/node": "^20",
     "better-sqlite3": "^13.0.3",
     "ts-node": "^10.9.2",
+    "tsx": "^4.19.0",
     "typescript": "^5",
     "vitest": "^4.1.11"
   }

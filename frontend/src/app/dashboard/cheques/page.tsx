@@ -22,6 +22,7 @@ import {
   Clock,
   CheckCheck,
   UserCheck,
+  RefreshCw,
 } from "lucide-react";
 import { clsx } from "clsx";
 
@@ -68,6 +69,13 @@ export default function ChequesPage() {
   const [creationDate, setCreationDate] = useState(new Date().toISOString().split("T")[0]);
   const [creationPlace, setCreationPlace] = useState("Casablanca");
   const [storedBeneficiaries, setStoredBeneficiaries] = useState<any[]>([]);
+
+  // SAP Mode state (driven by entity settings)
+  const [sapMode, setSapMode] = useState(user?.entityDataMode === "SAP");
+  const [sapEntityId, setSapEntityId] = useState<string | null>(null);
+  const [sapLoading, setSapLoading] = useState(false);
+  const [sapLookupError, setSapLookupError] = useState<string | null>(null);
+  const [entityCreationPlace, setEntityCreationPlace] = useState("Casablanca");
 
   useEffect(() => {
     const loadBeneficiaries = async () => {
@@ -531,10 +539,41 @@ export default function ChequesPage() {
                 <span>Import Batch Excel</span>
               </button>
 
+              {user?.entityDataMode === "SAP" && (
+                <button
+                  onClick={() => setSapMode(!sapMode)}
+                  className={clsx(
+                    "inline-flex items-center gap-2 px-3.5 py-2.5 font-semibold text-sm rounded-xl transition-all border",
+                    sapMode
+                      ? "bg-blue-500 hover:bg-blue-600 text-white border-blue-500"
+                      : "bg-white hover:bg-slate-50 text-blue-600 border-blue-200"
+                  )}
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  <span>{sapMode ? "Mode SAP" : "Mode Normal"}</span>
+                </button>
+              )}
+
               <button
-                onClick={() => {
+                onClick={async () => {
                   resetForm();
                   setIsCreateOpen(true);
+                  setSapLookupError(null);
+                  setSapLoading(false);
+                  if (sapMode && user?.entityId) {
+                    setSapEntityId(user.entityId);
+                    setCreationPlace("Casablanca");
+                    try {
+                      const entData = await fetchApi(`/api/entities/${user.entityId}`);
+                      setEntityCreationPlace(entData.defaultCreationPlace || "Casablanca");
+                      setCreationPlace(entData.defaultCreationPlace || "Casablanca");
+                      if (entData.bankEntities && entData.bankEntities.length > 0) {
+                        setBankId(entData.bankEntities[0].bankId);
+                      }
+                    } catch {}
+                  } else {
+                    setSapEntityId(null);
+                  }
                 }}
                 className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white font-semibold text-sm rounded-xl shadow-sm transition-all"
               >
@@ -797,7 +836,14 @@ export default function ChequesPage() {
         <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-bold text-lg text-slate-900">Saisie d'un nouveau chèque</h3>
+              <h3 className="font-bold text-lg text-slate-900 flex items-center gap-2">
+                Saisie d'un nouveau chèque
+                {sapMode && (
+                  <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold border border-blue-200">
+                    Mode SAP B1
+                  </span>
+                )}
+              </h3>
               <button onClick={() => setIsCreateOpen(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
               </button>
@@ -809,7 +855,8 @@ export default function ChequesPage() {
                 <select
                   value={bankId}
                   onChange={(e) => setBankId(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30 font-semibold"
+                  disabled={sapMode}
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {banks.map((b) => (
                     <option key={b.id} value={b.id}>
@@ -837,7 +884,8 @@ export default function ChequesPage() {
                       onFocus={() => setShowBeneficiaryDropdown(true)}
                       onBlur={() => setTimeout(() => setShowBeneficiaryDropdown(false), 200)}
                       placeholder="Tapez pour rechercher ou sélectionnez..."
-                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30 font-medium"
+                      disabled={sapMode}
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                     {showBeneficiaryDropdown && storedBeneficiaries.length > 0 && (
                       <div className="absolute z-20 top-full mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
@@ -891,7 +939,8 @@ export default function ChequesPage() {
                     value={amountNumeric}
                     onChange={(e) => handleAmountNumericChange(e.target.value)}
                     placeholder="ex: 125000.00"
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30"
+                    disabled={sapMode}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
 
@@ -901,7 +950,8 @@ export default function ChequesPage() {
                     type="text"
                     value={creationPlace}
                     onChange={(e) => setCreationPlace(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30"
+                    disabled={sapMode}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -914,7 +964,8 @@ export default function ChequesPage() {
                   rows={2}
                   value={amountWords}
                   onChange={(e) => setAmountWords(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30 font-medium"
+                  disabled={sapMode}
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -924,7 +975,8 @@ export default function ChequesPage() {
                   type="date"
                   value={creationDate}
                   onChange={(e) => setCreationDate(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30"
+                  disabled={sapMode}
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/30 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
 

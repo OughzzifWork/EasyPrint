@@ -25,12 +25,12 @@ router.get("/", adminOnly, async (_req, res) => {
   }
 });
 
-// Get single entity
-router.get("/:id", adminOnly, async (req, res) => {
+// Get single entity — accessible to all authenticated users (needed for SAP mode detection)
+router.get("/:id", async (req, res) => {
   try {
     const entity = await prisma.entity.findUnique({
       where: { id: req.params.id },
-      include: { _count: { select: { users: true, bankEntities: true, cheques: true, effets: true, beneficiaries: true } } },
+      include: { _count: { select: { users: true, bankEntities: true, cheques: true, effets: true, beneficiaries: true } }, bankEntities: { include: { bank: true } } },
     });
     if (!entity) return res.status(404).json({ error: "Entité non trouvée." });
     return res.json({ ...entity, sapPassword: entity.sapPassword ? maskPassword() : null });
@@ -48,18 +48,34 @@ router.post("/", adminOnly, validate(createEntitySchema), async (req, res) => {
     const existing = await prisma.entity.findUnique({ where: { code } });
     if (existing) return res.status(400).json({ error: "Ce code entité existe déjà." });
 
-    const entity = await prisma.entity.create({
-      data: {
-        name, code: code.toUpperCase(), dataMode: dataMode || "NORMAL",
-        defaultCreationPlace: defaultCreationPlace || "Casablanca",
-        sapServerUrl, sapCompanyDB, sapUser,
-        sapPassword: sapPassword ? encrypt(sapPassword) : null,
-        sapQuery,
-        bankEntities: {
-          create: (bankIds || []).map((bankId: string) => ({ bankId })),
+    const entity = await prisma.$transaction(async (tx) => {
+      const newEntity = await tx.entity.create({
+        data: {
+          name, code: code.toUpperCase(), dataMode: dataMode || "NORMAL",
+          defaultCreationPlace: defaultCreationPlace || "Casablanca",
+          sapServerUrl, sapCompanyDB, sapUser,
+          sapPassword: sapPassword ? encrypt(sapPassword) : null,
+          sapQuery,
+          bankEntities: {
+            create: (bankIds || []).map((bankId: string) => ({ bankId })),
+          },
         },
-      },
-      include: { bankEntities: { include: { bank: true } } },
+      });
+
+      // Auto-assign all templates of those banks to the entity
+      if (bankIds && bankIds.length > 0) {
+        const templates = await tx.template.findMany({
+          where: { bankId: { in: bankIds } },
+          select: { id: true },
+        });
+        if (templates.length > 0) {
+          await tx.templateEntity.createMany({
+            data: templates.map((t) => ({ templateId: t.id, entityId: newEntity.id })),
+          });
+        }
+      }
+
+      return newEntity;
     });
     return res.status(201).json({ ...entity, sapPassword: entity.sapPassword ? maskPassword() : null });
   } catch (error: any) {
@@ -87,6 +103,22 @@ router.put("/:id", adminOnly, validate(updateEntitySchema), async (req, res) => 
           await tx.bankEntity.createMany({
             data: bankIds.map((bankId: string) => ({ entityId: req.params.id, bankId })),
           });
+          // Auto-assign templates of new banks to this entity
+          const templates = await tx.template.findMany({
+            where: { bankId: { in: bankIds } },
+            select: { id: true },
+          });
+          const currentTemplateEntities = await tx.templateEntity.findMany({
+            where: { entityId: req.params.id },
+            select: { templateId: true },
+          });
+          const currentTemplateIds = new Set(currentTemplateEntities.map((te) => te.templateId));
+          const missingTemplates = templates.filter((t) => !currentTemplateIds.has(t.id));
+          if (missingTemplates.length > 0) {
+            await tx.templateEntity.createMany({
+              data: missingTemplates.map((t) => ({ templateId: t.id, entityId: req.params.id })),
+            });
+          }
         }
       }
 
@@ -177,8 +209,8 @@ router.post("/:id/test-sap", adminOnly, async (req, res) => {
   }
 });
 
-// Lookup single document from SAP B1 by code
-router.get("/:id/sap-lookup/:code", adminOnly, async (req, res) => {
+// Lookup single document from SAP B1 by code — accessible to all authenticated users
+router.get("/:id/sap-lookup/:code", async (req, res) => {
   try {
     const entity = await prisma.entity.findUnique({ where: { id: req.params.id } });
     if (!entity) return res.status(404).json({ error: "Entité non trouvée." });

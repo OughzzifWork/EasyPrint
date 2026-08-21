@@ -3,16 +3,32 @@
 import React, { useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { PanelLeftClose, PanelLeft, Menu } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      window.location.replace("/login");
+    }
+  }, [user, isLoading]);
 
   useEffect(() => {
     const handleResize = () => { if (window.innerWidth >= 1024) setIsMobileOpen(false); };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  if (isLoading) return (
+    <div className="flex h-screen h-[100dvh] w-full bg-[#FAFBFF] items-center justify-center">
+      <div className="text-slate-400 font-medium text-sm">Chargement...</div>
+    </div>
+  );
+
+  if (!user) return null;
 
   const toggleSidebar = () => {
     if (window.innerWidth < 1024) setIsMobileOpen(!isMobileOpen);

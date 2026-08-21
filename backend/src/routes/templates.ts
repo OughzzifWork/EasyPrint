@@ -75,6 +75,14 @@ router.post("/", authMiddleware, canEditOnly, validate(createTemplateSchema), as
       });
     }
 
+    // Auto-assign to all entities that use this bank
+    const bankEntities = await prisma.bankEntity.findMany({
+      where: { bankId },
+      select: { entityId: true },
+    });
+    const autoEntityIds = bankEntities.map((be) => be.entityId);
+    const finalEntityIds = entityIds && entityIds.length > 0 ? entityIds : autoEntityIds;
+
     const newTemplate = await prisma.template.create({
       data: {
         bankId,
@@ -85,7 +93,7 @@ router.post("/", authMiddleware, canEditOnly, validate(createTemplateSchema), as
         physicalHeightMm: physicalHeightMm ? parseFloat(physicalHeightMm) : 100,
         isActive: isActive !== undefined ? isActive : true,
         templateEntities: {
-          create: (entityIds || []).map((entityId: string) => ({ entityId })),
+          create: finalEntityIds.map((entityId: string) => ({ entityId })),
         },
         fields: {
           create: (fields || []).map((f: any) => ({
@@ -153,6 +161,20 @@ router.put("/:id", authMiddleware, canEditOnly, validate(updateTemplateSchema), 
         if (entityIds.length > 0) {
           await tx.templateEntity.createMany({
             data: entityIds.map((entityId: string) => ({ templateId: id, entityId })),
+          });
+        }
+      } else {
+        // Auto-sync: ensure all entities using this bank have the template
+        const bankEntities = await tx.bankEntity.findMany({
+          where: { bankId: existingTemplate.bankId },
+          select: { entityId: true },
+        });
+        const autoIds = bankEntities.map((be) => be.entityId);
+        const currentIds = existingTemplate.templateEntities.map((te) => te.entityId);
+        const missingIds = autoIds.filter((eid) => !currentIds.includes(eid));
+        if (missingIds.length > 0) {
+          await tx.templateEntity.createMany({
+            data: missingIds.map((entityId) => ({ templateId: id, entityId })),
           });
         }
       }
